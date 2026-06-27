@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Traductor de subtítulos SRT</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f4f0;
+      --surface: #ffffff;
+      --surface-2: #f9f8f5;
+      --border: #e2e0d8;
+      --border-strong: #ccc9be;
+      --text: #1a1a18;
+      --text-2: #5a5a54;
+      --text-3: #9a9a92;
+      --accent: #2d6a4f;
+      --accent-light: #e8f4ee;
+      --accent-text: #1b4332;
+      --warn: #92400e;
+      --warn-bg: #fef3c7;
+      --radius: 8px;
+      --radius-lg: 14px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ── Layout ── */
+    .page { max-width: 960px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+    header { margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+    header h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em; color: var(--text); }
+    header p { color: var(--text-2); margin-top: 0.35rem; font-size: 0.9rem; }
+    .tag {
+      display: inline-block; background: var(--accent-light); color: var(--accent-text);
+      font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 99px;
+      letter-spacing: 0.04em; text-transform: uppercase; margin-left: 10px; vertical-align: middle;
+    }
+
+    /* ── Drop zone ── */
+    .drop-zone {
+      border: 2px dashed var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      background: var(--surface);
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    .dz-icon { font-size: 2.5rem; margin-bottom: 0.6rem; }
+    .dz-title { font-size: 1rem; font-weight: 600; color: var(--text); }
+    .dz-sub { font-size: 0.85rem; color: var(--text-2); margin-top: 0.25rem; }
+    .dz-formats { font-size: 0.78rem; color: var(--text-3); margin-top: 0.5rem; }
+
+    /* ── Controls ── */
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      align-items: end;
+      margin: 1.25rem 0;
+    }
+    .field label {
+      display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-2);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;
+    }
+    select, textarea, input[type="email"] {
+      width: 100%; padding: 0.55rem 0.75rem;
+      border: 1px solid var(--border-strong); border-radius: var(--radius);
+      background: var(--surface); color: var(--text); font-size: 0.9rem;
+      font-family: inherit; appearance: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,0.12); }
+
+    .swap-btn {
+      background: var(--surface); border: 1px solid var(--border-strong);
+      border-radius: var(--radius); width: 38px; height: 38px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+      transition: background 0.15s; color: var(--text-2); margin-bottom: 0; align-self: end;
+    }
+    .swap-btn:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+
+    /* ── Context ── */
+    .context-section { margin-bottom: 1.25rem; }
+    .context-section label {
+      display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-2);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;
+    }
+    .context-hint { font-size: 0.78rem; color: var(--text-3); margin-top: 0.3rem; }
+    textarea { resize: vertical; min-height: 56px; line-height: 1.5; }
+
+    /* ── Action row ── */
+    .action-row { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1.5rem; }
+    .btn-primary {
+      background: var(--accent); color: #fff; border: none; border-radius: var(--radius);
+      padding: 0.6rem 1.4rem; font-size: 0.92rem; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; gap: 0.45rem;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-primary:hover { background: #235c42; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { background: #aaa; cursor: not-allowed; transform: none; }
+    .btn-secondary {
+      background: var(--surface); color: var(--text); border: 1px solid var(--border-strong);
+      border-radius: var(--radius); padding: 0.6rem 1.2rem; font-size: 0.9rem; font-weight: 500;
+      cursor: pointer; display: flex; align-items: center; gap: 0.4rem;
+      transition: background 0.15s;
+    }
+    .btn-secondary:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent-text); }
+    .btn-secondary:disabled { color: var(--text-3); cursor: not-allowed; }
+
+    /* ── Status ── */
+    .status {
+      display: none; align-items: center; gap: 0.75rem;
+      padding: 0.75rem 1rem; border-radius: var(--radius);
+      font-size: 0.88rem; margin-bottom: 1.25rem;
+      border: 1px solid var(--border);
+    }
+    .status.visible { display: flex; }
+    .status.working { background: var(--accent-light); border-color: #a3d9be; color: var(--accent-text); }
+    .status.done { background: #ecfdf5; border-color: #6ee7b7; color: #065f46; }
+    .status.error { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+    .status.warning { background: var(--warn-bg); border-color: #fbbf24; color: var(--warn); }
+    .progress-track { flex: 1; height: 5px; background: rgba(0,0,0,0.1); border-radius: 99px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.3s ease; }
+    .spinner {
+      width: 16px; height: 16px; border: 2px solid rgba(45,106,79,0.25);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.7s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Aviso límite ── */
+    .rate-note {
+      font-size: 0.8rem; color: var(--text-3);
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 0.5rem 0.85rem; margin-bottom: 1.25rem;
+    }
+    .rate-note strong { color: var(--text-2); }
+
+    /* ── Editor ── */
+    .editor {
+      display: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--surface);
+    }
+    .editor.visible { display: block; }
+
+    .editor-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.7rem 1rem; background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+    }
+    .editor-meta { font-size: 0.85rem; color: var(--text-2); display: flex; align-items: center; gap: 0.5rem; }
+    .badge {
+      font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 99px;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .badge.ok { background: #d1fae5; color: #065f46; }
+    .badge.pending { background: var(--warn-bg); color: var(--warn); }
+
+    .subtitle-table { width: 100%; }
+    .col-headers {
+      display: grid; grid-template-columns: 48px 148px 1fr 1fr;
+      background: var(--surface-2); border-bottom: 1px solid var(--border-strong);
+      position: sticky; top: 0; z-index: 2;
+    }
+    .col-headers span {
+      padding: 0.45rem 0.75rem; font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3);
+      border-right: 1px solid var(--border);
+    }
+    .col-headers span:last-child { border-right: none; }
+
+    .rows-wrap { max-height: 520px; overflow-y: auto; }
+
+    .sub-row {
+      display: grid; grid-template-columns: 48px 148px 1fr 1fr;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    .sub-row:last-child { border-bottom: none; }
+    .sub-row:hover { background: #fafaf8; }
+    .sub-row.is-translating { background: var(--accent-light); }
+    .sub-row.is-done { background: #fff; }
+    .sub-row.is-error { background: #fef2f2; }
+
+    .cell {
+      padding: 0.55rem 0.75rem; font-size: 0.85rem;
+      border-right: 1px solid var(--border); display: flex; align-items: flex-start;
+    }
+    .cell:last-child { border-right: none; }
+    .cell.c-num { color: var(--text-3); font-size: 0.78rem; justify-content: center; align-items: center; font-variant-numeric: tabular-nums; }
+    .cell.c-time { font-family: 'Courier New', monospace; font-size: 0.72rem; color: var(--text-2); align-items: center; line-height: 1.7; }
+    .cell.c-orig { color: var(--text); white-space: pre-wrap; word-break: break-word; }
+    .cell.c-trans { padding: 0.4rem 0.6rem; }
+    .cell.c-trans textarea {
+      width: 100%; background: transparent; border: none; border-radius: 4px;
+      font-size: 0.85rem; color: var(--text); font-family: inherit;
+      line-height: 1.5; resize: none; min-height: 20px; padding: 2px 4px;
+      transition: background 0.1s;
+    }
+    .cell.c-trans textarea:focus { outline: none; background: rgba(45,106,79,0.06); }
+    .cell.c-trans textarea.pending { color: var(--text-3); font-style: italic; }
+
+    /* ── Footer ── */
+    footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.8rem; color: var(--text-3); }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>Traductor de subtítulos SRT <span class="tag">Gratuito</span></h1>
+    <p>Sube un archivo .srt, elige el idioma de destino y descarga la traducción. Sin registro, sin coste.</p>
+  </header>
+
+  <!-- Drop zone -->
+  <div class="drop-zone" id="drop-zone">
+    <input type="file" id="file-input" accept=".srt,.txt" aria-label="Seleccionar archivo SRT">
+    <div class="dz-icon">📄</div>
+    <div class="dz-title">Arrastra tu archivo .srt aquí</div>
+    <div class="dz-sub">o haz clic para seleccionarlo</div>
+    <div class="dz-formats">Archivos .srt · Codificación UTF-8 o latin-1</div>
+  </div>
+
+  <!-- Language controls -->
+  <div class="controls">
+    <div class="field">
+      <label for="lang-from">Idioma de origen</label>
+      <select id="lang-from"></select>
+    </div>
+    <button class="swap-btn" id="swap-btn" title="Intercambiar idiomas" aria-label="Intercambiar idiomas">⇄</button>
+    <div class="field">
+      <label for="lang-to">Idioma de destino</label>
+      <select id="lang-to"></select>
+    </div>
+  </div>
+
+  <!-- Context -->
+  <div class="context-section">
+    <label for="ctx-input">Contexto del contenido <span style="font-weight:400;text-transform:none;letter-spacing:0">(opcional pero recomendado)</span></label>
+    <textarea id="ctx-input" rows="2" placeholder="Ej: Documental sobre historia medieval catalana. Tono formal. Narrador en tercera persona."></textarea>
+    <p class="context-hint">Describir el contenido mejora la coherencia de la traducción, especialmente para términos técnicos o dialectales.</p>
+  </div>
+
+  <!-- MyMemory rate note -->
+  <div class="rate-note">
+    ⚡ Usa la API gratuita de <strong>MyMemory</strong>. Límite: ~5.000 palabras/día por IP. Para archivos grandes, añade tu email (opcional) para ampliar el límite a ~50.000 palabras/día.
+    <br><input type="email" id="mymemory-email" placeholder="tu@email.com (opcional, para aumentar límite)" style="margin-top:6px;max-width:340px;">
+  </div>
+
+  <!-- Actions -->
+  <div class="action-row">
+    <button class="btn-primary" id="translate-btn" disabled>▶ Traducir</button>
+    <button class="btn-secondary" id="download-btn" disabled>⬇ Descargar .srt</button>
+    <button class="btn-secondary" id="clear-btn" style="display:none">✕ Nuevo archivo</button>
+  </div>
+
+  <!-- Status -->
+  <div class="status" id="status-bar" role="status" aria-live="polite"></div>
+
+  <!-- Editor -->
+  <div class="editor" id="editor">
+    <div class="editor-toolbar">
+      <div class="editor-meta">
+        <span id="editor-count">0 subtítulos</span>
+        <span class="badge pending" id="editor-badge">Sin traducir</span>
+      </div>
+      <div style="font-size:0.8rem;color:var(--text-3)">Edita las traducciones directamente antes de descargar</div>
+    </div>
+    <div class="subtitle-table">
+      <div class="col-headers">
+        <span>#</span><span>Tiempo</span><span>Original</span><span>Traducción</span>
+      </div>
+      <div class="rows-wrap" id="rows-wrap"></div>
+    </div>
+  </div>
+
+  <footer>
+    Motor de traducción: <a href="https://mymemory.translated.net" target="_blank" rel="noopener">MyMemory</a> · Código abierto · Sin cookies · Sin tracking
+  </footer>
+
+</div>
+
+<script>
+/* ── Idiomas soportados por MyMemory ── */
+const LANGS = [
+  { code: 'ca', label: 'Catalán (català)' },
+  { code: 'gl', label: 'Gallego (galego)' },
+  { code: 'eu', label: 'Euskera (euskara)' },
+  { code: 'es', label: 'Español' },
+  { code: 'en', label: 'Inglés' },
+  { code: 'fr', label: 'Francés' },
+  { code: 'pt', label: 'Portugués' },
+  { code: 'it', label: 'Italiano' },
+  { code: 'de', label: 'Alemán' },
+  { code: 'nl', label: 'Neerlandés' },
+  { code: 'ro', label: 'Rumano' },
+  { code: 'ru', label: 'Ruso' },
+  { code: 'uk', label: 'Ucraniano' },
+  { code: 'pl', label: 'Polaco' },
+  { code: 'cs', label: 'Checo' },
+  { code: 'sk', label: 'Eslovaco' },
+  { code: 'bg', label: 'Búlgaro' },
+  { code: 'sr', label: 'Serbio' },
+  { code: 'hr', label: 'Croata' },
+  { code: 'hu', label: 'Húngaro' },
+  { code: 'sv', label: 'Sueco' },
+  { code: 'no', label: 'Noruego' },
+  { code: 'da', label: 'Danés' },
+  { code: 'fi', label: 'Finlandés' },
+  { code: 'el', label: 'Griego' },
+  { code: 'tr', label: 'Turco' },
+  { code: 'ar', label: 'Árabe' },
+  { code: 'he', label: 'Hebreo' },
+  { code: 'fa', label: 'Persa (farsi)' },
+  { code: 'hi', label: 'Hindi' },
+  { code: 'ur', label: 'Urdu' },
+  { code: 'bn', label: 'Bengalí' },
+  { code: 'ja', label: 'Japonés' },
+  { code: 'ko', label: 'Coreano' },
+  { code: 'zh', label: 'Chino simplificado' },
+  { code: 'zh-TW', label: 'Chino tradicional' },
+  { code: 'vi', label: 'Vietnamita' },
+  { code: 'th', label: 'Tailandés' },
+  { code: 'id', label: 'Indonesio' },
+  { code: 'ms', label: 'Malayo' },
+];
+
+function buildSelect(sel, defaultCode) {
+  LANGS.forEach(l => {
+    const o = document.createElement('option');
+    o.value = l.code; o.textContent = l.label;
+    if (l.code === defaultCode) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+buildSelect(document.getElementById('lang-from'), 'ca');
+buildSelect(document.getElementById('lang-to'), 'es');
+
+document.getElementById('swap-btn').addEventListener('click', () => {
+  const a = document.getElementById('lang-from').value;
+  const b = document.getElementById('lang-to').value;
+  document.getElementById('lang-from').value = b;
+  document.getElementById('lang-to').value = a;
+});
+
+/* ── Estado ── */
+let subtitles = [];
+let fileName = 'subtitulos_traducidos.srt';
+let isRunning = false;
+
+/* ── Parsear SRT ── */
+function parseSRT(text) {
+  const clean = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+  const blocks = clean.split(/\n{2,}/);
+  const result = [];
+  blocks.forEach(block => {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) return;
+    let i = 0;
+    // índice numérico opcional
+    const isNum = /^\d+$/.test(lines[0].trim());
+    const idx = isNum ? lines[i++].trim() : String(result.length + 1);
+    if (i >= lines.length) return;
+    if (!lines[i].includes('-->')) return;
+    const time = lines[i++].trim();
+    const content = lines.slice(i).join('\n').trim();
+    if (!content) return;
+    result.push({ idx, time, original: content, translation: '', error: false });
+  });
+  return result;
+}
+
+/* ── Cargar archivo ── */
+function tryDecode(buffer) {
+  // intenta UTF-8, luego latin-1
+  try {
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+    return text;
+  } catch {
+    return new TextDecoder('iso-8859-1').decode(buffer);
+  }
+}
+
+document.getElementById('drop-zone').addEventListener('click', (e) => {
+  if (e.target.tagName !== 'INPUT') document.getElementById('file-input').click();
+});
+document.getElementById('drop-zone').addEventListener('dragover', e => { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); });
+document.getElementById('drop-zone').addEventListener('dragleave', () => document.getElementById('drop-zone').classList.remove('drag-over'));
+document.getElementById('drop-zone').addEventListener('drop', e => {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) loadFile(f);
+});
+document.getElementById('file-input').addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+function loadFile(file) {
+  fileName = file.name.replace(/\.srt$/i, '') + '_traducido.srt';
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = tryDecode(e.target.result);
+    subtitles = parseSRT(text);
+    if (!subtitles.length) {
+      showStatus('error', '❌ No se encontraron subtítulos válidos. Comprueba que el archivo es un .srt correcto.');
+      return;
+    }
+    renderEditor();
+    document.getElementById('translate-btn').disabled = false;
+    document.getElementById('clear-btn').style.display = 'flex';
+    const dz = document.getElementById('drop-zone');
+    dz.querySelector('.dz-icon').textContent = '✅';
+    dz.querySelector('.dz-title').textContent = file.name;
+    dz.querySelector('.dz-sub').textContent = `${subtitles.length} subtítulos detectados`;
+    hideStatus();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* ── Renderizar editor ── */
+function renderEditor() {
+  const editor = document.getElementById('editor');
+  const wrap = document.getElementById('rows-wrap');
+  editor.classList.add('visible');
+  document.getElementById('editor-count').textContent = `${subtitles.length} subtítulos`;
+  wrap.innerHTML = '';
+  subtitles.forEach((sub, i) => {
+    const row = document.createElement('div');
+    row.className = 'sub-row';
+    row.id = `row-${i}`;
+    const timeDisplay = sub.time.replace('-->', '→');
+    row.innerHTML = `
+      <div class="cell c-num">${sub.idx}</div>
+      <div class="cell c-time">${escHtml(timeDisplay)}</div>
+      <div class="cell c-orig">${escHtml(sub.original)}</div>
+      <div class="cell c-trans"><textarea id="ta-${i}" rows="1" aria-label="Traducción del subtítulo ${sub.idx}">${escHtml(sub.translation)}</textarea></div>
+    `;
+    const ta = row.querySelector(`#ta-${i}`);
+    ta.addEventListener('input', () => {
+      subtitles[i].translation = ta.value;
+      autoH(ta);
+    });
+    wrap.appendChild(row);
+  });
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function autoH(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+
+/* ── Traducción con MyMemory ── */
+document.getElementById('translate-btn').addEventListener('click', runTranslation);
+
+async function translateOne(text, from, to, email) {
+  // Limpiar etiquetas HTML para la traducción pero guardarlas
+  const stripped = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const query = encodeURIComponent(stripped);
+  const pair = `${from}|${to}`;
+  let url = `https://api.mymemory.translated.net/get?q=${query}&langpair=${pair}`;
+  if (email) url += `&de=${encodeURIComponent(email)}`;
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  if (data.responseStatus !== 200) throw new Error(data.responseDetails || 'Error de API');
+  return data.responseData.translatedText;
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function runTranslation() {
+  if (isRunning) return;
+  isRunning = true;
+
+  const from = document.getElementById('lang-from').value;
+  const to = document.getElementById('lang-to').value;
+  const email = document.getElementById('mymemory-email').value.trim();
+
+  if (from === to) {
+    showStatus('warning', '⚠️ El idioma de origen y destino son iguales.');
+    isRunning = false; return;
+  }
+
+  document.getElementById('translate-btn').disabled = true;
+  document.getElementById('download-btn').disabled = true;
+
+  let done = 0;
+  let errors = 0;
+  showStatus('working', `Traduciendo… 0 de ${subtitles.length}`, 0);
+
+  for (let i = 0; i < subtitles.length; i++) {
+    const sub = subtitles[i];
+    const row = document.getElementById(`row-${i}`);
+    const ta = document.getElementById(`ta-${i}`);
+
+    if (row) row.className = 'sub-row is-translating';
+    if (ta) { ta.className = 'pending'; ta.value = 'Traduciendo…'; }
+
+    try {
+      const result = await translateOne(sub.original, from, to, email);
+      sub.translation = result;
+      sub.error = false;
+      if (ta) { ta.value = result; ta.className = ''; autoH(ta); }
+      if (row) row.className = 'sub-row is-done';
+      done++;
+    } catch (err) {
+      sub.error = true;
+      if (ta) { ta.value = ''; ta.className = ''; ta.placeholder = 'Error — edita manualmente'; }
+      if (row) row.className = 'sub-row is-error';
+      errors++;
+      // si hay error de límite, pausar más
+      if (err.message.includes('403') || err.message.includes('limit')) {
+        showStatus('warning', `⚠️ Posible límite de API alcanzado en subtítulo ${i+1}. Esperando 10s…`, Math.round((done/subtitles.length)*100));
+        await delay(10000);
+      }
+    }
+
+    const pct = Math.round(((i+1) / subtitles.length) * 100);
+    showStatus('working', `Traduciendo… ${i+1} de ${subtitles.length} (${pct}%)`, pct);
+
+    // Pausa entre peticiones para no saturar la API gratuita
+    if (i < subtitles.length - 1) await delay(300);
+  }
+
+  isRunning = false;
+  document.getElementById('translate-btn').disabled = false;
+  document.getElementById('download-btn').disabled = false;
+
+  const badge = document.getElementById('editor-badge');
+  if (errors === 0) {
+    showStatus('done', `✅ Traducción completada — ${done} subtítulos. Revisa y descarga.`);
+    badge.textContent = 'Traducido'; badge.className = 'badge ok';
+  } else {
+    showStatus('warning', `⚠️ ${done} subtítulos traducidos, ${errors} fallaron (puedes editarlos manualmente).`);
+    badge.textContent = `${errors} errores`; badge.className = 'badge pending';
+  }
+}
+
+/* ── Descargar ── */
+document.getElementById('download-btn').addEventListener('click', () => {
+  const lines = subtitles.map(s =>
+    `${s.idx}\n${s.time}\n${s.translation || s.original}`
+  ).join('\n\n');
+  const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+/* ── Limpiar ── */
+document.getElementById('clear-btn').addEventListener('click', () => {
+  subtitles = [];
+  document.getElementById('editor').classList.remove('visible');
+  document.getElementById('rows-wrap').innerHTML = '';
+  document.getElementById('translate-btn').disabled = true;
+  document.getElementById('download-btn').disabled = true;
+  document.getElementById('clear-btn').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  const dz = document.getElementById('drop-zone');
+  dz.querySelector('.dz-icon').textContent = '📄';
+  dz.querySelector('.dz-title').textContent = 'Arrastra tu archivo .srt aquí';
+  dz.querySelector('.dz-sub').textContent = 'o haz clic para seleccionarlo';
+  hideStatus();
+});
+
+/* ── Status helpers ── */
+function showStatus(type, msg, pct) {
+  const bar = document.getElementById('status-bar');
+  bar.className = `status visible ${type}`;
+  if (type === 'working') {
+    bar.innerHTML = `<div class="spinner"></div><span style="flex:0 0 auto">${msg}</span><div class="progress-track"><div class="progress-fill" style="width:${pct||0}%"></div></div>`;
+  } else {
+    bar.innerHTML = `<span>${msg}</span>`;
+  }
+}
+function hideStatus() {
+  document.getElementById('status-bar').className = 'status';
+}
+</script>
+</body>
+</html>
