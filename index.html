@@ -963,42 +963,54 @@
     .badge-error { background: var(--error-bg); color: var(--error-color); }
     .badge-accent { background: var(--accent-light); color: var(--accent-color); }
 
-    /* ── WORKSPACE LAYOUT & VIDEO PANEL ── */
+    /* ── WORKSPACE LAYOUT ── */
     .workspace-layout-grid {
       display: grid;
       grid-template-columns: 1fr;
       gap: 1.5rem;
       align-items: start;
     }
-    @media (min-width: 1024px) {
-      .workspace-layout-grid {
-        grid-template-columns: 360px 1fr;
-      }
-    }
-    @media (min-width: 1200px) {
-      .workspace-layout-grid {
-        grid-template-columns: 420px 1fr;
-      }
-    }
 
-    .video-studio-panel {
-      position: sticky;
-      top: 1.5rem;
+    /* Video player embedded in editor panel */
+    .video-inline-player {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: var(--card-shadow);
+      display: none; /* shown via JS when video loads */
+    }
+    .video-inline-player.visible {
+      display: block;
+    }
+    .video-inline-header {
       display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      padding: 1.25rem;
-      z-index: 20;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-surface-accent);
+    }
+    .video-inline-header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+    .video-inline-header-left svg { color: var(--accent-color); }
+    .video-inline-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
     .video-container-wrapper {
       position: relative;
       width: 100%;
       background: #000000;
-      border-radius: 12px;
-      overflow: hidden;
       aspect-ratio: 16/9;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1069,6 +1081,215 @@
       border-left: 3px solid var(--accent-color);
     }
 
+    /* ── FULLSCREEN VIDEO ── */
+    /* Mostrar botón al hacer hover sobre el wrapper */
+    .video-container-wrapper:hover #btn-fullscreen {
+      opacity: 1;
+    }
+
+    /* En fullscreen el wrapper ocupa toda la pantalla */
+    .video-container-wrapper:fullscreen,
+    .video-container-wrapper:-webkit-full-screen,
+    .video-container-wrapper:-moz-full-screen,
+    .video-container-wrapper:-ms-fullscreen {
+      background: #000;
+      width: 100vw;
+      height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0;
+    }
+
+    .video-container-wrapper:fullscreen #studio-video-element,
+    .video-container-wrapper:-webkit-full-screen #studio-video-element,
+    .video-container-wrapper:-moz-full-screen #studio-video-element {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Overlay más grande en fullscreen */
+    .video-container-wrapper:fullscreen .video-subtitle-overlay,
+    .video-container-wrapper:-webkit-full-screen .video-subtitle-overlay,
+    .video-container-wrapper:-moz-full-screen .video-subtitle-overlay {
+      font-size: clamp(1.1rem, 2.5vw, 2rem);
+      padding: 0.5rem 1.2rem;
+      bottom: 6%;
+      left: 4%;
+      right: 4%;
+    }
+
+    /* El botón de fs también visible en fullscreen */
+    .video-container-wrapper:fullscreen #btn-fullscreen,
+    .video-container-wrapper:-webkit-full-screen #btn-fullscreen {
+      opacity: 0;
+    }
+    .video-container-wrapper:fullscreen:hover #btn-fullscreen,
+    .video-container-wrapper:-webkit-full-screen:hover #btn-fullscreen {
+      opacity: 1;
+    }
+
+    /* Indicador de modo activo en el switcher de subtítulos */
+    #video-subtitles-control .engine-tab.active {
+      background: var(--bg-surface);
+      color: var(--accent-color);
+      font-weight: 700;
+    }
+
+    /* ── WELCOME SCREEN: DUAL DROP ZONES ── */
+    .welcome-screen {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      animation: fadeIn var(--transition-slow);
+    }
+    .welcome-drop-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+    @media (max-width: 640px) {
+      .welcome-drop-grid { grid-template-columns: 1fr; }
+    }
+    .welcome-drop-card {
+      border: 2px dashed var(--border-color);
+      border-radius: 18px;
+      background: var(--bg-surface);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      min-height: 200px;
+      box-shadow: var(--card-shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .welcome-drop-card:hover {
+      border-color: var(--accent-color);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.12);
+    }
+    .welcome-drop-card.drag-over {
+      border-color: var(--accent-color);
+      background: var(--accent-light);
+    }
+    .welcome-drop-card.loaded {
+      border-color: var(--success-color);
+      border-style: solid;
+      background: var(--success-bg);
+    }
+    .welcome-drop-card.loaded:hover {
+      border-color: var(--success-color);
+      box-shadow: 0 10px 30px rgba(16, 185, 129, 0.12);
+    }
+    .welcome-drop-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--accent-light);
+      color: var(--accent-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform var(--transition-normal);
+    }
+    .welcome-drop-card:hover .welcome-drop-icon {
+      transform: scale(1.08) rotate(4deg);
+    }
+    .welcome-drop-card.loaded .welcome-drop-icon {
+      background: var(--success-bg);
+      color: var(--success-color);
+    }
+    .welcome-drop-label {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .welcome-drop-sub {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+    .welcome-drop-formats {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    .welcome-drop-loaded-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--success-color);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* ── BUFFER OVERLAY ── */
+    .buffer-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      z-index: 30;
+      border-radius: 12px;
+      backdrop-filter: blur(2px);
+    }
+    .buffer-overlay .spinner {
+      width: 32px;
+      height: 32px;
+      border-width: 3px;
+    }
+    .buffer-overlay-text {
+      color: #ffffff;
+      font-size: 0.88rem;
+      font-weight: 600;
+      text-align: center;
+    }
+    .buffer-progress-bar {
+      width: 140px;
+      height: 3px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .buffer-progress-fill {
+      height: 100%;
+      background: var(--accent-color);
+      border-radius: 99px;
+      transition: width 0.4s ease;
+    }
+
+    /* ── FULLSCREEN CTA BUTTON (en workspace header) ── */
+    .btn-fullscreen-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15));
+      border: 1px solid rgba(59,130,246,0.3);
+      color: var(--accent-color);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    .btn-fullscreen-cta:hover {
+      background: linear-gradient(135deg, rgba(59,130,246,0.25), rgba(139,92,246,0.25));
+      border-color: var(--accent-color);
+      transform: translateY(-1px);
+    }
+    .btn-fullscreen-cta svg { width: 16px; height: 16px; }
+
     /* ── FOOTER ── */
     footer {
       margin-top: 4rem;
@@ -1115,77 +1336,53 @@
     </div>
   </nav>
 
-  <!-- ── UNIFIED WORKSPACE LAYOUT GRID ── -->
+  <!-- ── WORKSPACE ── -->
   <div class="workspace-layout-grid">
     
-    <!-- Left Column: Video Studio Panel (Always Visible) -->
-    <div class="video-studio-panel panel">
-      <div class="panel-title">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-          <polygon points="23 7 16 12 23 17 23 7"></polygon>
-          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-        </svg>
-        Sincronización de Vídeo
-      </div>
-      
-      <div class="video-container-wrapper hidden" id="video-wrapper">
-        <video id="studio-video-element" controls></video>
-        <div class="video-subtitle-overlay hidden" id="video-subtitle-overlay"></div>
-      </div>
-      
-      <div class="video-drop-zone" id="video-drop-zone">
-        <input type="file" id="video-file-input" accept="video/*" style="display:none;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="38" height="38" style="margin-bottom:0.4rem; color:var(--text-secondary);">
-          <polygon points="23 7 16 12 23 17 23 7"></polygon>
-          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-        </svg>
-        <p style="font-weight:600; font-size:0.8rem; margin-bottom:0.25rem;">Cargar vídeo local</p>
-        <span style="font-size:0.72rem; color:var(--text-muted);">Arrastra tu vídeo aquí o haz clic para seleccionarlo</span>
-      </div>
-      
-      <div class="hidden" id="video-meta-control" style="display:flex; justify-content:space-between; align-items:center; width:100%; font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem;">
-        <span id="video-loaded-name" style="text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:180px; font-weight:500;">video.mp4</span>
-        <button class="btn" id="btn-remove-video" style="padding:0.2rem 0.5rem; font-size:0.7rem; border-radius:6px; border-color:var(--error-color); color:var(--error-color); background:transparent;">Quitar</button>
-      </div>
-
-      <!-- Segmented subtitle switcher control -->
-      <div class="hidden" id="video-subtitles-control" style="display:flex; flex-direction:column; gap:0.5rem; width:100%; border-top: 1px solid var(--border-color); padding-top:0.75rem; margin-top:0.5rem;">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap: 0.5rem;">
-          <span style="font-size:0.75rem; font-weight:600; color:var(--text-secondary);">Subtítulos:</span>
-          <div class="engine-switcher" style="padding: 2px; border-radius: 8px;">
-            <div class="engine-tab active" data-submode="trans" style="padding:0.25rem 0.5rem; font-size:0.7rem; border-radius:6px;" id="sub-mode-trans">Traducidos</div>
-            <div class="engine-tab" data-submode="orig" style="padding:0.25rem 0.5rem; font-size:0.7rem; border-radius:6px;" id="sub-mode-orig">Original</div>
-            <div class="engine-tab" data-submode="off" style="padding:0.25rem 0.5rem; font-size:0.7rem; border-radius:6px;" id="sub-mode-off">Desactivar</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Right Column: Subtitle Panel (Dual States: Upload VS Editor) -->
+    <!-- Single Column: all content -->
     <div class="editor-studio-panel">
       
       <!-- STATE 1: SRT FILE UPLOAD & CONFIG (Shown initially) -->
-      <div id="right-panel-upload" class="screen">
+      <div id="right-panel-upload" class="screen welcome-screen">
         <div class="hero" style="margin: 0.5rem auto 1.5rem; text-align: left;">
           <h2 style="font-size: 2.2rem; line-height: 1.2; margin-bottom: 0.5rem;">Traducción de Subtítulos.<br>Simplificada y Profesional.</h2>
-          <p>Sube archivos SRT y tradúcelos automáticamente en segundos. Sincroniza tu vídeo en vivo y edita en tiempo real.</p>
+          <p>Sube tu SRT y tu vídeo, pulsa traducir y disfruta de la película mientras se traduce en tiempo real.</p>
         </div>
 
-        <!-- SRT Drop Zone -->
-        <div class="drop-zone" id="drop-zone">
-          <input type="file" id="file-input" accept=".srt,.txt" aria-label="Seleccionar archivo SRT">
-          <div class="dz-icon-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="12" y1="18" x2="12" y2="12"></line>
-              <polyline points="9 15 12 12 15 15"></polyline>
-            </svg>
+        <!-- DUAL DROP ZONES: SRT + VIDEO -->
+        <div class="welcome-drop-grid">
+
+          <!-- SRT Drop Zone -->
+          <div class="welcome-drop-card" id="drop-zone" role="button" tabindex="0" aria-label="Subir archivo SRT">
+            <input type="file" id="file-input" accept=".srt,.txt" style="display:none;" aria-label="Seleccionar archivo SRT">
+            <div class="welcome-drop-icon" id="dz-srt-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="26" height="26">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="12" y1="18" x2="12" y2="12"></line>
+                <polyline points="9 15 12 12 15 15"></polyline>
+              </svg>
+            </div>
+            <div class="welcome-drop-label" id="dz-srt-label">Archivo de Subtítulos</div>
+            <div class="welcome-drop-sub" id="dz-srt-sub">Arrastra tu .srt aquí<br>o haz clic para explorar</div>
+            <div class="welcome-drop-formats" id="dz-srt-formats">Formato SRT · Codificación UTF-8</div>
           </div>
-          <div class="dz-title">Arrastra tu archivo .srt aquí</div>
-          <div class="dz-sub">o haz clic para examinar en tu dispositivo</div>
-          <div class="dz-formats">Codificación recomendada UTF-8 · Archivos de subtítulos SRT</div>
-        </div>
+
+          <!-- Video Drop Zone -->
+          <div class="welcome-drop-card" id="welcome-video-drop-zone" role="button" tabindex="0" aria-label="Subir archivo de vídeo">
+            <input type="file" id="welcome-video-input" accept="video/*" style="display:none;" aria-label="Seleccionar vídeo">
+            <div class="welcome-drop-icon" id="dz-video-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="26" height="26">
+                <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+              </svg>
+            </div>
+            <div class="welcome-drop-label" id="dz-video-label">Archivo de Vídeo</div>
+            <div class="welcome-drop-sub" id="dz-video-sub">Arrastra tu vídeo aquí<br>o haz clic para explorar</div>
+            <div class="welcome-drop-formats" id="dz-video-formats">MP4, MKV, AVI, MOV…</div>
+          </div>
+
+        </div><!-- /welcome-drop-grid -->
 
         <!-- Configuration Panels (Engines & Languages) -->
         <div class="setup-grid">
@@ -1272,6 +1469,75 @@
             </div>
           </div>
         </div>
+
+        <!-- Botón de acción principal -->
+        <button id="btn-go-to-editor" class="btn btn-primary" disabled style="
+          width:100%; padding: 0.9rem 1.5rem; font-size: 1rem; font-weight: 600;
+          border-radius: 14px; gap: 0.6rem; justify-content: center;
+          opacity: 0.45; transition: opacity 0.2s, transform 0.15s;
+        ">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          Sube el SRT para continuar
+        </button>
+      </div>
+
+      <!-- ── INLINE VIDEO PLAYER (shown in workspace when video is loaded) ── -->
+      <div class="video-inline-player" id="video-inline-player">
+        <div class="video-inline-header">
+          <div class="video-inline-header-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+              <polygon points="23 7 16 12 23 17 23 7"></polygon>
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+            </svg>
+            <span id="video-loaded-name">video.mp4</span>
+          </div>
+          <div class="video-inline-controls">
+            <!-- Subtitle mode switcher -->
+            <div id="video-subtitles-control" style="display:flex; align-items:center; gap:0.5rem;">
+              <span style="font-size:0.72rem; font-weight:600; color:var(--text-muted);">Subtítulos:</span>
+              <div class="engine-switcher" style="padding:2px; border-radius:8px;">
+                <div class="engine-tab active" data-submode="trans" style="padding:0.2rem 0.5rem; font-size:0.7rem; border-radius:6px;">Traducidos</div>
+                <div class="engine-tab" data-submode="orig" style="padding:0.2rem 0.5rem; font-size:0.7rem; border-radius:6px;">Original</div>
+                <div class="engine-tab" data-submode="off" style="padding:0.2rem 0.5rem; font-size:0.7rem; border-radius:6px;">Off</div>
+              </div>
+            </div>
+            <!-- Fullscreen CTA -->
+            <button class="btn-fullscreen-cta" id="btn-fullscreen-cta" title="Pantalla completa">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>
+              </svg>
+              Pantalla Completa
+            </button>
+            <!-- Remove video -->
+            <button class="btn" id="btn-remove-video" style="padding:0.3rem 0.6rem; font-size:0.72rem; border-radius:7px; border-color:var(--error-color); color:var(--error-color); background:transparent;">Quitar vídeo</button>
+          </div>
+        </div>
+        <!-- Video wrapper: fullscreen target -->
+        <div class="video-container-wrapper" id="video-wrapper">
+          <video id="studio-video-element" controls disablepictureinpicture></video>
+          <div class="video-subtitle-overlay hidden" id="video-subtitle-overlay"></div>
+          <!-- Buffer overlay -->
+          <div class="buffer-overlay hidden" id="buffer-overlay">
+            <div class="spinner"></div>
+            <div class="buffer-overlay-text">Buffering subtítulos…</div>
+            <div class="buffer-progress-bar"><div class="buffer-progress-fill" id="buffer-progress-fill" style="width:0%"></div></div>
+          </div>
+          <!-- Fullscreen button (hover on video) -->
+          <button id="btn-fullscreen" title="Pantalla completa" aria-label="Pantalla completa" style="
+            position:absolute; top:8px; right:8px; z-index:20;
+            background:rgba(0,0,0,0.55); border:none; border-radius:7px;
+            width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+            cursor:pointer; color:#fff; opacity:0; transition:opacity 0.2s;">
+            <svg id="fs-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>
+            </svg>
+            <svg id="fs-icon-compress" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" style="display:none;">
+              <path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/>
+            </svg>
+          </button>
+        </div>
       </div>
       
       <!-- STATE 2: ACTIVE EDITOR (Hidden initially) -->
@@ -1303,7 +1569,7 @@
           </div>
 
           <!-- Quick actions -->
-          <div style="display:flex; gap:0.5rem;">
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
             <button class="btn btn-primary" id="btn-run-translation">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
               Traducir Todo
@@ -1358,6 +1624,26 @@
             <button class="btn btn-primary" id="btn-do-replace-all">Reemplazar Todo</button>
             <button class="btn" id="btn-close-fr">Cerrar</button>
           </div>
+        </div>
+
+        <!-- Banner aviso límite MyMemory -->
+        <div id="banner-mymemory-limit" class="hidden" style="
+          display:flex; align-items:flex-start; gap:0.85rem;
+          background: var(--warning-bg); border: 1px solid var(--warning-color);
+          border-radius: 12px; padding: 0.9rem 1.1rem; font-size:0.85rem; line-height:1.45;
+          color: var(--text-primary);
+        ">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--warning-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" style="flex-shrink:0; margin-top:1px;">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <div id="banner-mymemory-text">
+            <strong>Algunas líneas no se han podido traducir</strong> — MyMemory tiene un límite diario de ~5.000 palabras por IP sin registro.
+            <br>Añade tu correo en <button onclick="document.getElementById('settings-modal').classList.add('open')" style="background:none;border:none;padding:0;cursor:pointer;color:var(--accent-color);font-weight:600;font-size:inherit;text-decoration:underline;">⚙ Configuración</button> para ampliar el límite a <strong>50.000 palabras/día gratis</strong>. Después pulsa "Traducir Todo" de nuevo para reintentar solo las líneas fallidas.
+          </div>
+          <button onclick="document.getElementById('banner-mymemory-limit').classList.add('hidden')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0;margin-left:auto;flex-shrink:0;" title="Cerrar aviso">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
         </div>
 
         <!-- Subtitle Table Viewport -->
@@ -1638,7 +1924,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateEngineToggles();
 
   // Engine Switchers Event
-  document.querySelectorAll('.engine-tab').forEach(tab => {
+  document.querySelectorAll('.engine-tab[data-engine]').forEach(tab => {
     tab.addEventListener('click', () => {
       activeEngine = tab.dataset.engine;
       updateEngineToggles();
@@ -1703,10 +1989,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('btn-do-replace-all').addEventListener('click', performFindAndReplace);
 
-  // File Upload Handlers
+  // Botón principal de ir al editor
+  document.getElementById('btn-go-to-editor').addEventListener('click', goToEditor);
+
+  // ── SRT DROP ZONE (welcome screen) ──
   const dz = document.getElementById('drop-zone');
   dz.addEventListener('click', (e) => {
     if (e.target.tagName !== 'INPUT') document.getElementById('file-input').click();
+  });
+  dz.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') document.getElementById('file-input').click();
   });
   dz.addEventListener('dragover', e => {
     e.preventDefault();
@@ -1722,14 +2014,46 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.files[0]) loadSRTFile(e.target.files[0]);
   });
 
+  // ── VIDEO DROP ZONE (welcome screen) ──
+  const wvdz = document.getElementById('welcome-video-drop-zone');
+  wvdz.addEventListener('click', (e) => {
+    if (e.target.tagName !== 'INPUT') document.getElementById('welcome-video-input').click();
+  });
+  wvdz.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') document.getElementById('welcome-video-input').click();
+  });
+  wvdz.addEventListener('dragover', e => {
+    e.preventDefault();
+    wvdz.classList.add('drag-over');
+  });
+  wvdz.addEventListener('dragleave', () => wvdz.classList.remove('drag-over'));
+  wvdz.addEventListener('drop', e => {
+    e.preventDefault();
+    wvdz.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) loadWelcomeVideoFile(e.dataTransfer.files[0]);
+  });
+  document.getElementById('welcome-video-input').addEventListener('change', e => {
+    if (e.target.files[0]) loadWelcomeVideoFile(e.target.files[0]);
+  });
+
   // Main Action buttons
   document.getElementById('btn-run-translation').addEventListener('click', executeTranslationWork);
   document.getElementById('btn-download').addEventListener('click', downloadSRTText);
   document.getElementById('btn-new-file').addEventListener('click', resetWorkspace);
 
-  // Initialize Video Sync and Upload listeners
+  // Fullscreen CTA button (in inline video player header)
+  document.getElementById('btn-fullscreen-cta').addEventListener('click', () => {
+    const wrapper = document.getElementById('video-wrapper');
+    if (!wrapper) return;
+    const req = wrapper.requestFullscreen || wrapper.webkitRequestFullscreen || wrapper.mozRequestFullScreen || wrapper.msRequestFullscreen;
+    if (req) req.call(wrapper);
+  });
+
+  // Initialize Video Sync and Upload listeners (sidebar video panel in workspace)
   initVideoUpload();
   initVideoSync();
+  initSubtitleModeSwitcher();
+  initFullscreenButton();
 });
 
 /* ── SETTINGS & THEME HELPERS ── */
@@ -1771,7 +2095,7 @@ function applyTheme(theme) {
 
 function updateEngineToggles() {
   localStorage.setItem('engine', activeEngine);
-  document.querySelectorAll('.engine-tab').forEach(tab => {
+  document.querySelectorAll('.engine-tab[data-engine]').forEach(tab => {
     tab.classList.toggle('active', tab.dataset.engine === activeEngine);
   });
   
@@ -1874,32 +2198,130 @@ function parseSRTContent(text) {
   return parsedSubtitles;
 }
 
+// ── WELCOME SCREEN STATE ──
+let pendingVideoFile = null;  // video chosen on welcome screen before going to editor
+
+function loadWelcomeVideoFile(file) {
+  pendingVideoFile = file;
+
+  const card = document.getElementById('welcome-video-drop-zone');
+  const icon = document.getElementById('dz-video-icon');
+  const label = document.getElementById('dz-video-label');
+  const sub = document.getElementById('dz-video-sub');
+  const formats = document.getElementById('dz-video-formats');
+
+  card.classList.add('loaded');
+  card.classList.remove('drag-over');
+
+  icon.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="26" height="26">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>`;
+
+  label.textContent = 'Vídeo cargado';
+  sub.innerHTML = `<span class="welcome-drop-loaded-name">✓ ${file.name}</span>`;
+  formats.textContent = 'Haz clic para cambiar el vídeo';
+
+  updateGoButton();
+}
+
+function updateGoButton() {
+  const btn = document.getElementById('btn-go-to-editor');
+  const hasSRT = pendingSRTFile !== null && subtitles.length > 0;
+  const hasVideo = pendingVideoFile !== null;
+
+  if (!hasSRT) {
+    btn.disabled = true;
+    btn.style.opacity = '0.45';
+    btn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+      </svg>
+      Sube el SRT para continuar`;
+    return;
+  }
+
+  btn.disabled = false;
+  btn.style.opacity = '1';
+
+  if (hasSRT && hasVideo) {
+    btn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+        <polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+      </svg>
+      Traducir y Ver — ${subtitles.length} subtítulos`;
+  } else {
+    btn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+      </svg>
+      Traducir — ${subtitles.length} subtítulos (sin vídeo)`;
+  }
+}
+
 function loadSRTFile(file) {
-  fileName = file.name.replace(/\.srt$/i, '') + '_traducido.srt';
   const reader = new FileReader();
   
   reader.onload = (e) => {
     const rawText = tryDecodeFileContent(e.target.result);
-    subtitles = parseSRTContent(rawText);
+    const parsed = parseSRTContent(rawText);
     
-    if (subtitles.length === 0) {
+    if (parsed.length === 0) {
       showToast('error', 'El archivo no contiene un formato SRT válido.');
       return;
     }
-    
-    // Switch Panel
-    document.getElementById('right-panel-upload').classList.add('hidden');
-    document.getElementById('right-panel-editor').classList.remove('hidden');
-    
-    // Set Header Info
-    document.getElementById('work-file-name').textContent = file.name;
-    document.getElementById('work-file-meta').textContent = `${subtitles.length} subtítulos · SRT`;
-    
-    renderStudioEditor();
-    showToast('success', `Cargado: ${subtitles.length} subtítulos detectados.`);
+
+    subtitles = parsed;
+    pendingSRTFile = file;
+    fileName = file.name.replace(/\.srt$/i, '') + '_traducido.srt';
+
+    // Actualizar la card del welcome screen
+    const card = document.getElementById('drop-zone');
+    const icon = document.getElementById('dz-srt-icon');
+    const labelEl = document.getElementById('dz-srt-label');
+    const subEl = document.getElementById('dz-srt-sub');
+    const formatsEl = document.getElementById('dz-srt-formats');
+
+    card.classList.add('loaded');
+    card.classList.remove('drag-over');
+
+    icon.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="26" height="26">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>`;
+
+    labelEl.textContent = 'SRT cargado';
+    subEl.innerHTML = `<span class="welcome-drop-loaded-name">&#10003; ${file.name}</span>`;
+    formatsEl.textContent = `${parsed.length} subtítulos detectados · haz clic para cambiar`;
+
+    updateGoButton();
+    showToast('success', `${parsed.length} subtítulos detectados. Configura las opciones y pulsa Traducir.`);
   };
   
   reader.readAsArrayBuffer(file);
+}
+
+function goToEditor() {
+  if (!pendingSRTFile || subtitles.length === 0) return;
+
+  document.getElementById('right-panel-upload').classList.add('hidden');
+  document.getElementById('right-panel-editor').classList.remove('hidden');
+
+  document.getElementById('work-file-name').textContent = pendingSRTFile.name;
+  document.getElementById('work-file-meta').textContent = `${subtitles.length} subtítulos · SRT`;
+
+  renderStudioEditor();
+
+  // Si el usuario subió un vídeo en la welcome screen, cargarlo en el reproductor inline
+  if (pendingVideoFile) {
+    loadVideoFile(pendingVideoFile);
+  }
+
+  // Activar modo subtítulos
+  setSubtitleMode('trans');
+
+  // Lanzar la traducción automáticamente
+  executeTranslationWork();
 }
 
 /* ── RENDERING THE STUDIO EDITOR ── */
@@ -2152,16 +2574,42 @@ async function executeTranslationWork() {
     showToast('error', `Traducción completada con fallos.`);
   } finally {
     isRunning = false;
+    bufferPaused = false; // ensure we never leave the video frozen after translation ends
+
+    // Clear buffer overlay and resume video if it was paused waiting for buffer
+    const bufferOverlay = document.getElementById('buffer-overlay');
+    if (bufferOverlay) bufferOverlay.classList.add('hidden');
+
+    const video = document.getElementById('studio-video-element');
+    if (video && video.src && video.paused && video.readyState >= 2) {
+      video.play().catch(() => {});
+    }
+
     document.getElementById('btn-run-translation').disabled = false;
     document.getElementById('btn-download').disabled = false;
     
     // Check if there are errors
     const errors = subtitles.filter(s => s.status === 'error').length;
+    const banner = document.getElementById('banner-mymemory-limit');
     if (errors === 0) {
       showToast('success', 'Traducción completada con éxito.');
       progressBox.classList.add('hidden');
+      if (banner) banner.classList.add('hidden');
     } else {
       showToast('warning', `Traducción terminada. ${errors} líneas fallaron.`);
+      if (banner && activeEngine === 'mymemory') {
+        const hasEmail = !!(localStorage.getItem('mymemory_email') || '').trim();
+        const bannerText = banner.querySelector('#banner-mymemory-text');
+        if (bannerText) {
+          if (hasEmail) {
+            bannerText.innerHTML = `<strong>Algunas líneas no se han podido traducir.</strong> Has alcanzado el límite diario de MyMemory (~50.000 palabras/día con email registrado). Espera unas horas e inténtalo de nuevo, o usa el motor <strong>Gemini AI</strong> como alternativa.`;
+          } else {
+            bannerText.innerHTML = `<strong>Algunas líneas no se han podido traducir</strong> — MyMemory tiene un límite de ~5.000 palabras/día por IP sin registro.<br>Añade tu correo en <button onclick="document.getElementById('settings-modal').classList.add('open')" style="background:none;border:none;padding:0;cursor:pointer;color:var(--accent-color);font-weight:600;font-size:inherit;text-decoration:underline;">⚙ Configuración</button> para ampliar el límite a <strong>50.000 palabras/día gratis</strong>. Después pulsa "Traducir Todo" de nuevo para reintentar las líneas fallidas.`;
+          }
+        }
+        banner.classList.remove('hidden');
+        banner.style.display = 'flex';
+      }
     }
   }
 }
@@ -2230,6 +2678,8 @@ async function fetchMyMemoryTranslation(text, fromCode, toCode, email) {
 async function translateWithMyMemoryIndividual(fromCode, toCode) {
   const email = localStorage.getItem('mymemory_email') || '';
   const total = subtitles.length;
+  // Con email: ~1 req/s seguro. Sin email: más restrictivo, usamos 1.2s
+  const baseDelay = email ? 1000 : 1200;
   
   for (let i = 0; i < total; i++) {
     const sub = subtitles[i];
@@ -2242,29 +2692,41 @@ async function translateWithMyMemoryIndividual(fromCode, toCode) {
     updateRowStatus(i, 'translating');
     updateProgressUI(i + 1, total, `Línea ${i + 1} de ${total}`);
     
-    try {
-      const result = await fetchMyMemoryTranslation(sub.original, fromCode, toCode, email);
-      sub.translation = result;
-      
-      const ta = document.getElementById(`trans-textarea-${i}`);
-      if (ta) {
-        ta.value = result;
-        adjustTextAreaHeight(ta);
-      }
-      updateRowStatus(i, 'success');
-    } catch (err) {
-      console.error(err);
-      updateRowStatus(i, 'error');
-      
-      // Delay if it's rate limit
-      if (err.message.includes('403') || err.message.toLowerCase().includes('limit')) {
-        updateProgressUI(i + 1, total, 'Límite alcanzado. Esperando 8s...');
-        await sleep(8000);
+    let retries = 0;
+    const maxRetries = 3;
+
+    while (retries <= maxRetries) {
+      try {
+        const result = await fetchMyMemoryTranslation(sub.original, fromCode, toCode, email);
+        sub.translation = result;
+        
+        const ta = document.getElementById(`trans-textarea-${i}`);
+        if (ta) {
+          ta.value = result;
+          adjustTextAreaHeight(ta);
+        }
+        updateRowStatus(i, 'success');
+        break; // éxito, salir del while
+      } catch (err) {
+        const is429 = err.message.includes('429');
+        const isLimit = err.message.includes('403') || err.message.toLowerCase().includes('limit');
+
+        if ((is429 || isLimit) && retries < maxRetries) {
+          retries++;
+          const waitSec = retries * 10; // 10s, 20s, 30s
+          updateProgressUI(i + 1, total, `Límite alcanzado. Reintento ${retries}/${maxRetries} en ${waitSec}s...`);
+          showToast('warning', `Rate limit de MyMemory. Esperando ${waitSec}s...`);
+          await sleep(waitSec * 1000);
+        } else {
+          console.error(err);
+          updateRowStatus(i, 'error');
+          break;
+        }
       }
     }
     
-    // Throttling to prevent API ban
-    await sleep(250);
+    // Pausa entre peticiones para respetar el límite de MyMemory
+    await sleep(baseDelay);
   }
 }
 
@@ -2413,15 +2875,48 @@ function downloadSRTText() {
 /* ── WORKSPACE RESET ── */
 function resetWorkspace() {
   subtitles = [];
+  pendingSRTFile = null;
+  pendingVideoFile = null;
+  bufferPaused = false;
+
   document.getElementById('right-panel-editor').classList.add('hidden');
   document.getElementById('right-panel-upload').classList.remove('hidden');
   document.getElementById('file-input').value = '';
+  const wvi = document.getElementById('welcome-video-input');
+  if (wvi) wvi.value = '';
   document.getElementById('studio-search-input').value = '';
   document.getElementById('editor-progress-bar').classList.add('hidden');
-  
-  const dz = document.getElementById('drop-zone');
-  dz.querySelector('.dz-title').textContent = 'Arrastra tu archivo .srt aquí';
-  dz.querySelector('.dz-sub').textContent = 'o haz clic para examinar en tu dispositivo';
+
+  // Quitar el vídeo si estaba cargado
+  removeLoadedVideo();
+
+  // Restaurar SRT card
+  const srtCard = document.getElementById('drop-zone');
+  srtCard.classList.remove('loaded', 'drag-over');
+  document.getElementById('dz-srt-icon').innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="26" height="26">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+      <polyline points="14 2 14 8 20 8"></polyline>
+      <line x1="12" y1="18" x2="12" y2="12"></line>
+      <polyline points="9 15 12 12 15 15"></polyline>
+    </svg>`;
+  document.getElementById('dz-srt-label').textContent = 'Archivo de Subtítulos';
+  document.getElementById('dz-srt-sub').innerHTML = 'Arrastra tu .srt aquí<br>o haz clic para explorar';
+  document.getElementById('dz-srt-formats').textContent = 'Formato SRT · Codificación UTF-8';
+
+  // Restaurar Video card
+  const videoCard = document.getElementById('welcome-video-drop-zone');
+  videoCard.classList.remove('loaded', 'drag-over');
+  document.getElementById('dz-video-icon').innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="26" height="26">
+      <polygon points="23 7 16 12 23 17 23 7"></polygon>
+      <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+    </svg>`;
+  document.getElementById('dz-video-label').textContent = 'Archivo de Vídeo';
+  document.getElementById('dz-video-sub').innerHTML = 'Arrastra tu vídeo aquí<br>o haz clic para explorar';
+  document.getElementById('dz-video-formats').textContent = 'MP4, MKV, AVI, MOV…';
+
+  updateGoButton();
 }
 
 /* ── UX UTILS & WIDGETS ── */
@@ -2480,82 +2975,153 @@ function sleep(ms) {
 }
 
 /* ── VIDEO SYNC & PLAYER FUNCTIONS ── */
-function initVideoUpload() {
-  const vdz = document.getElementById('video-drop-zone');
-  const vinput = document.getElementById('video-file-input');
-  
-  if (!vdz || !vinput) return;
-  
-  vdz.addEventListener('click', () => vinput.click());
-  
-  vdz.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    vdz.style.borderColor = 'var(--accent-color)';
-    vdz.style.background = 'var(--accent-light)';
+
+// Modo activo de subtítulos: 'trans' | 'orig' | 'off'
+let subtitleMode = 'trans';
+
+function setSubtitleMode(mode) {
+  subtitleMode = mode;
+
+  // Actualizar tabs visuales
+  document.querySelectorAll('#video-subtitles-control .engine-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.submode === mode);
   });
-  vdz.addEventListener('dragleave', () => {
-    vdz.style.borderColor = '';
-    vdz.style.background = '';
-  });
-  vdz.addEventListener('drop', (e) => {
-    e.preventDefault();
-    vdz.style.borderColor = '';
-    vdz.style.background = '';
-    if (e.dataTransfer.files[0]) loadVideoFile(e.dataTransfer.files[0]);
-  });
-  
-  vinput.addEventListener('change', (e) => {
-    if (e.target.files[0]) loadVideoFile(e.target.files[0]);
-  });
-  
-  const btnRemove = document.getElementById('btn-remove-video');
-  if (btnRemove) {
-    btnRemove.addEventListener('click', removeLoadedVideo);
+
+  const overlay = document.getElementById('video-subtitle-overlay');
+  if (!overlay) return;
+
+  if (mode === 'off') {
+    overlay.classList.add('hidden');
+    overlay.textContent = '';
+  } else {
+    // Forzar re-render del subtítulo activo según el nuevo modo
+    const video = document.getElementById('studio-video-element');
+    if (video && subtitles.length > 0) {
+      const curTime = video.currentTime;
+      const active = subtitles.find(s => curTime >= s.startTime && curTime <= s.endTime);
+      if (active) {
+        const text = mode === 'orig' ? active.original : (active.translation.trim() !== '' ? active.translation : active.original);
+        overlay.textContent = text;
+        overlay.classList.remove('hidden');
+      } else {
+        overlay.textContent = '';
+        overlay.classList.add('hidden');
+      }
+    }
   }
+}
+
+function initSubtitleModeSwitcher() {
+  document.querySelectorAll('#video-subtitles-control .engine-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      setSubtitleMode(tab.dataset.submode);
+    });
+  });
+}
+
+function initFullscreenButton() {
+  const wrapper = document.getElementById('video-wrapper');
+  const video = document.getElementById('studio-video-element');
+  const btn = document.getElementById('btn-fullscreen');
+  const iconExpand = document.getElementById('fs-icon-expand');
+  const iconCompress = document.getElementById('fs-icon-compress');
+
+  if (!wrapper || !btn || !video) return;
+
+  // Función central: entrar en fs con el wrapper (no con el <video>)
+  function enterFullscreen() {
+    const req = wrapper.requestFullscreen
+      || wrapper.webkitRequestFullscreen
+      || wrapper.mozRequestFullScreen
+      || wrapper.msRequestFullscreen;
+    if (req) req.call(wrapper);
+  }
+
+  function exitFullscreen() {
+    const exit = document.exitFullscreen
+      || document.webkitExitFullscreen
+      || document.mozCancelFullScreen
+      || document.msExitFullscreen;
+    if (exit) exit.call(document);
+  }
+
+  // Botón propio
+  btn.addEventListener('click', () => {
+    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+    isFs ? exitFullscreen() : enterFullscreen();
+  });
+
+  // Interceptar el fullscreen nativo del <video> (botón en controles del navegador)
+  // Cuando el vídeo pide fullscreen, cancelarlo y redirigirlo al wrapper
+  video.addEventListener('fullscreenchange', () => {
+    if (document.fullscreenElement === video) {
+      // El <video> ha entrado en fullscreen nativo → sacarlo y meter el wrapper
+      document.exitFullscreen().then(() => enterFullscreen()).catch(() => {});
+    }
+  });
+  video.addEventListener('webkitfullscreenchange', () => {
+    if (document.webkitFullscreenElement === video) {
+      document.webkitExitFullscreen
+        ? document.webkitExitFullscreen()
+        : document.exitFullscreen && document.exitFullscreen();
+      setTimeout(() => enterFullscreen(), 100);
+    }
+  });
+
+  // Actualizar icono del botón al cambiar estado
+  const onFsChange = () => {
+    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+    iconExpand.style.display = isFs ? 'none' : '';
+    iconCompress.style.display = isFs ? '' : 'none';
+  };
+
+  document.addEventListener('fullscreenchange', onFsChange);
+  document.addEventListener('webkitfullscreenchange', onFsChange);
+  document.addEventListener('mozfullscreenchange', onFsChange);
+}
+
+function initVideoUpload() {
+  // The old sidebar video-drop-zone is gone. Wire up btn-remove-video which is now in the inline player.
+  const btnRemove = document.getElementById('btn-remove-video');
+  if (btnRemove) btnRemove.addEventListener('click', removeLoadedVideo);
 }
 
 function loadVideoFile(file) {
   const video = document.getElementById('studio-video-element');
-  const wrapper = document.getElementById('video-wrapper');
-  const vdz = document.getElementById('video-drop-zone');
-  const meta = document.getElementById('video-meta-control');
+  const inlinePlayer = document.getElementById('video-inline-player');
   const nameSpan = document.getElementById('video-loaded-name');
-  
-  if (!video || !wrapper || !vdz) return;
-  
+
+  if (!video) return;
+
   const url = URL.createObjectURL(file);
   video.src = url;
-  
-  wrapper.classList.remove('hidden');
-  vdz.classList.add('hidden');
-  if (meta) meta.classList.remove('hidden');
-  if (nameSpan) nameSpan.textContent = file.name;
-  
   video.load();
-  showToast('success', `Vídeo sincronizado: ${file.name}`);
+
+  if (nameSpan) nameSpan.textContent = file.name;
+  if (inlinePlayer) inlinePlayer.classList.add('visible');
+
+  showToast('success', `Vídeo cargado: ${file.name}`);
 }
 
 function removeLoadedVideo() {
   const video = document.getElementById('studio-video-element');
-  const wrapper = document.getElementById('video-wrapper');
-  const vdz = document.getElementById('video-drop-zone');
-  const meta = document.getElementById('video-meta-control');
+  const inlinePlayer = document.getElementById('video-inline-player');
   const overlay = document.getElementById('video-subtitle-overlay');
-  
+  const bufferOverlay = document.getElementById('buffer-overlay');
+
   if (!video) return;
-  
+
   video.pause();
   video.removeAttribute('src');
   video.load();
-  
-  if (wrapper) wrapper.classList.add('hidden');
-  if (vdz) vdz.classList.remove('hidden');
-  if (meta) meta.classList.add('hidden');
-  if (overlay) {
-    overlay.classList.add('hidden');
-    overlay.textContent = '';
-  }
-  
+
+  if (inlinePlayer) inlinePlayer.classList.remove('visible');
+  if (overlay) { overlay.classList.add('hidden'); overlay.textContent = ''; }
+  if (bufferOverlay) bufferOverlay.classList.add('hidden');
+
+  bufferPaused = false;
+  pendingVideoFile = null;
+
   if (activeRowIndex !== -1) {
     const prevRow = document.getElementById(`sub-row-${activeRowIndex}`);
     if (prevRow) prevRow.classList.remove('active-playing');
@@ -2565,6 +3131,81 @@ function removeLoadedVideo() {
 
 let activeRowIndex = -1;
 
+/* ── BUFFER SYSTEM ── */
+// How many subtitle lines ahead of current playback position must be translated
+// before the video is allowed to play. Simple and robust:
+// Find the subtitle whose startTime is closest after currentTime.
+// If it (or the next BUFFER_LINES after it) are untranslated → pause.
+const BUFFER_LINES = 5;
+let bufferPaused = false;
+
+function checkBuffer(video) {
+  // Once translation is done, never block
+  if (!isRunning) {
+    if (bufferPaused) {
+      bufferPaused = false;
+      const bufferOverlay = document.getElementById('buffer-overlay');
+      if (bufferOverlay) bufferOverlay.classList.add('hidden');
+      video.play().catch(() => {});
+    }
+    return;
+  }
+
+  const curTime = video.currentTime;
+
+  // Find which subtitle index is "next" (starts after current time)
+  let nextIdx = -1;
+  for (let i = 0; i < subtitles.length; i++) {
+    if (subtitles[i].startTime > curTime) {
+      nextIdx = i;
+      break;
+    }
+  }
+
+  // If there are no more subtitles ahead, no need to buffer
+  if (nextIdx === -1) {
+    releaseBuf(video);
+    return;
+  }
+
+  // Check the next BUFFER_LINES subtitles starting from nextIdx
+  let untranslated = 0;
+  const end = Math.min(nextIdx + BUFFER_LINES, subtitles.length);
+  for (let i = nextIdx; i < end; i++) {
+    if (subtitles[i].translation.trim() === '') untranslated++;
+  }
+
+  const total = end - nextIdx;
+  const translated = total - untranslated;
+  const pct = total === 0 ? 100 : Math.round((translated / total) * 100);
+
+  const bufferOverlay = document.getElementById('buffer-overlay');
+  const fillEl = document.getElementById('buffer-progress-fill');
+
+  if (untranslated > 0) {
+    // Need to pause
+    if (!bufferPaused) {
+      video.pause();
+      bufferPaused = true;
+    }
+    if (bufferOverlay) {
+      bufferOverlay.classList.remove('hidden');
+      if (fillEl) fillEl.style.width = pct + '%';
+    }
+  } else {
+    releaseBuf(video);
+  }
+}
+
+function releaseBuf(video) {
+  if (bufferPaused) {
+    bufferPaused = false;
+    video.play().catch(() => {});
+  }
+  const bufferOverlay = document.getElementById('buffer-overlay');
+  if (bufferOverlay) bufferOverlay.classList.add('hidden');
+}
+
 function initVideoSync() {
   const video = document.getElementById('studio-video-element');
   const overlay = document.getElementById('video-subtitle-overlay');
@@ -2572,9 +3213,14 @@ function initVideoSync() {
   if (!video || !overlay) return;
   
   video.addEventListener('timeupdate', () => {
+    // Buffer check
+    checkBuffer(video);
+
+    if (subtitleMode === 'off') return;
+
     const curTime = video.currentTime;
     
-    // Find active subtitle
+    // Encontrar subtítulo activo
     let foundIdx = -1;
     for (let i = 0; i < subtitles.length; i++) {
       if (curTime >= subtitles[i].startTime && curTime <= subtitles[i].endTime) {
@@ -2584,7 +3230,7 @@ function initVideoSync() {
     }
     
     if (foundIdx !== activeRowIndex) {
-      // Remove highlight from previous row
+      // Quitar highlight de la fila anterior
       if (activeRowIndex !== -1) {
         const prevRow = document.getElementById(`sub-row-${activeRowIndex}`);
         if (prevRow) prevRow.classList.remove('active-playing');
@@ -2594,21 +3240,25 @@ function initVideoSync() {
       
       if (activeRowIndex !== -1) {
         const activeSub = subtitles[activeRowIndex];
-        const text = activeSub.translation.trim() !== '' ? activeSub.translation : activeSub.original;
+        // Elegir texto según modo
+        let text;
+        if (subtitleMode === 'orig') {
+          text = activeSub.original;
+        } else {
+          // 'trans': mostrar traducción si existe, si no el original
+          text = activeSub.translation.trim() !== '' ? activeSub.translation : activeSub.original;
+        }
         
-        // Show subtitle overlay
         overlay.textContent = text;
         overlay.classList.remove('hidden');
         
-        // Highlight active row in editor
+        // Highlight fila activa en el editor
         const activeRow = document.getElementById(`sub-row-${activeRowIndex}`);
         if (activeRow) {
           activeRow.classList.add('active-playing');
-          // Scroll active row into view
           activeRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
       } else {
-        // Hide overlay
         overlay.textContent = '';
         overlay.classList.add('hidden');
       }
