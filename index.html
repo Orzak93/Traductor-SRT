@@ -3,322 +3,1448 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Traductor de subtítulos SRT</title>
+  <title>Traductor SRT — Traducción Inteligente de Subtítulos</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
   <style>
+    /* ── RESET & DESIGN SYSTEM ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #f5f4f0;
-      --surface: #ffffff;
-      --surface-2: #f9f8f5;
-      --border: #e2e0d8;
-      --border-strong: #ccc9be;
-      --text: #1a1a18;
-      --text-2: #5a5a54;
-      --text-3: #9a9a92;
-      --accent: #2d6a4f;
-      --accent-light: #e8f4ee;
-      --accent-text: #1b4332;
-      --warn: #92400e;
-      --warn-bg: #fef3c7;
-      --radius: 8px;
-      --radius-lg: 14px;
+      --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-slow: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-display: 'Outfit', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    body.theme-dark {
+      --bg-app: #0a0a0c;
+      --bg-surface: #141417;
+      --bg-surface-hover: #1e1e24;
+      --bg-surface-accent: #19191d;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-color-hover: rgba(255, 255, 255, 0.15);
+      --text-primary: #f4f4f6;
+      --text-secondary: #a1a1aa;
+      --text-muted: #52525b;
+      --accent-color: #3b82f6;
+      --accent-light: rgba(59, 130, 246, 0.1);
+      --accent-hover: #2563eb;
+      --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      --success-color: #10b981;
+      --success-bg: rgba(16, 185, 129, 0.1);
+      --warning-color: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.1);
+      --error-color: #ef4444;
+      --error-bg: rgba(239, 68, 68, 0.1);
+      --card-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+      --glass-bg: rgba(20, 20, 23, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.06);
+      --focus-ring: rgba(59, 130, 246, 0.25);
+    }
+
+    body.theme-light {
+      --bg-app: #f4f5f8;
+      --bg-surface: #ffffff;
+      --bg-surface-hover: #f1f2f5;
+      --bg-surface-accent: #f8f9fa;
+      --border-color: rgba(0, 0, 0, 0.08);
+      --border-color-hover: rgba(0, 0, 0, 0.15);
+      --text-primary: #1c1c1e;
+      --text-secondary: #636366;
+      --text-muted: #8e8e93;
+      --accent-color: #007aff;
+      --accent-light: rgba(0, 122, 255, 0.08);
+      --accent-hover: #0062cc;
+      --accent-gradient: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+      --success-color: #34c759;
+      --success-bg: rgba(52, 199, 89, 0.1);
+      --warning-color: #ff9500;
+      --warning-bg: rgba(255, 149, 0, 0.1);
+      --error-color: #ff3b30;
+      --error-bg: rgba(255, 59, 48, 0.1);
+      --card-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.08);
+      --glass-bg: rgba(255, 255, 255, 0.75);
+      --glass-border: rgba(0, 0, 0, 0.06);
+      --focus-ring: rgba(0, 122, 255, 0.25);
     }
 
     body {
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      font-family: var(--font-sans);
+      background-color: var(--bg-app);
+      color: var(--text-primary);
       min-height: 100vh;
-      font-size: 15px;
-      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      transition: background-color var(--transition-normal);
     }
 
-    /* ── Layout ── */
-    .page { max-width: 960px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    /* ── SCROLLBARS ── */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--border-color-hover); }
 
-    header { margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
-    header h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em; color: var(--text); }
-    header p { color: var(--text-2); margin-top: 0.35rem; font-size: 0.9rem; }
-    .tag {
-      display: inline-block; background: var(--accent-light); color: var(--accent-text);
-      font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 99px;
-      letter-spacing: 0.04em; text-transform: uppercase; margin-left: 10px; vertical-align: middle;
+    /* ── LAYOUT & CONTAINER ── */
+    .app-container {
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.5rem 1.5rem 3rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
     }
 
-    /* ── Drop zone ── */
+    /* ── TOP NAV BAR ── */
+    .top-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+    .brand svg {
+      width: 32px;
+      height: 32px;
+      color: var(--accent-color);
+    }
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* ── BUTTONS (APPLE STYLE) ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 0.88rem;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      user-select: none;
+    }
+    .btn:hover {
+      border-color: var(--border-color-hover);
+      background: var(--bg-surface-hover);
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .btn-icon-only {
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border-radius: 50%;
+    }
+    .btn-primary {
+      background: var(--accent-color);
+      color: #ffffff;
+      border-color: transparent;
+    }
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* ── DYNAMIC SCREENS ── */
+    .screen {
+      animation: fadeIn var(--transition-slow);
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+    .hidden {
+      display: none !important;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── HERO HEADER ── */
+    .hero {
+      text-align: center;
+      margin: 1rem auto 2.5rem;
+      max-width: 640px;
+    }
+    .hero h2 {
+      font-family: var(--font-display);
+      font-size: 2.75rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.15;
+      margin-bottom: 0.75rem;
+    }
+    .hero p {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      line-height: 1.5;
+      font-weight: 400;
+    }
+
+    /* ── DROP ZONE ── */
     .drop-zone {
-      border: 2px dashed var(--border-strong);
-      border-radius: var(--radius-lg);
-      padding: 2.5rem 2rem;
+      border: 2px dashed var(--border-color);
+      border-radius: 20px;
+      background: var(--bg-surface);
+      padding: 4rem 2rem;
       text-align: center;
       cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-      background: var(--surface);
       position: relative;
+      transition: all var(--transition-normal);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      min-height: 260px;
+      box-shadow: var(--card-shadow);
+    }
+    .drop-zone::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--accent-gradient);
+      opacity: 0;
+      transition: opacity var(--transition-normal);
+      z-index: 0;
+    }
+    .drop-zone:hover::before, .drop-zone.drag-over::before {
+      opacity: 0.02;
     }
     .drop-zone:hover, .drop-zone.drag-over {
-      border-color: var(--accent);
-      background: var(--accent-light);
+      border-color: var(--accent-color);
+      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.12);
+      transform: translateY(-2px);
     }
     .drop-zone input[type="file"] {
-      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
     }
-    .dz-icon { font-size: 2.5rem; margin-bottom: 0.6rem; }
-    .dz-title { font-size: 1rem; font-weight: 600; color: var(--text); }
-    .dz-sub { font-size: 0.85rem; color: var(--text-2); margin-top: 0.25rem; }
-    .dz-formats { font-size: 0.78rem; color: var(--text-3); margin-top: 0.5rem; }
+    .dz-icon-wrap {
+      width: 64px;
+      height: 64px;
+      background: var(--accent-light);
+      color: var(--accent-color);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.25rem;
+      transition: transform var(--transition-normal);
+      z-index: 1;
+    }
+    .drop-zone:hover .dz-icon-wrap {
+      transform: scale(1.05) rotate(5deg);
+    }
+    .dz-icon-wrap svg {
+      width: 32px;
+      height: 32px;
+    }
+    .dz-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.35rem;
+      z-index: 1;
+    }
+    .dz-sub {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+      z-index: 1;
+    }
+    .dz-formats {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      z-index: 1;
+    }
 
-    /* ── Controls ── */
-    .controls {
+    /* ── SETUP & ENGINE PANEL ── */
+    .setup-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    @media (min-width: 768px) {
+      .setup-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .panel-title {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+    .panel-title svg {
+      width: 20px;
+      height: 20px;
+      color: var(--accent-color);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .form-group label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .input-field {
+      width: 100%;
+      padding: 0.75rem 0.85rem;
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface-accent);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      transition: all var(--transition-fast);
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+    .input-wrapper {
+      position: relative;
+    }
+    .input-btn-inside {
+      position: absolute;
+      right: 6px;
+      top: 6px;
+      bottom: 6px;
+      padding: 0 0.75rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+    }
+
+    /* ── SEARCHABLE DROPDOWNS ── */
+    .custom-dropdown {
+      position: relative;
+      width: 100%;
+    }
+    .dropdown-trigger {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 0.85rem;
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface-accent);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-align: left;
+      transition: all var(--transition-fast);
+    }
+    .dropdown-trigger:hover {
+      border-color: var(--border-color-hover);
+    }
+    .dropdown-trigger:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+    .dropdown-chevron {
+      color: var(--text-secondary);
+      transition: transform var(--transition-fast);
+    }
+    .custom-dropdown.open .dropdown-chevron {
+      transform: rotate(180deg);
+    }
+    .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color-hover);
+      border-radius: 12px;
+      z-index: 50;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-8px) scale(0.97);
+      transition: all var(--transition-fast);
+    }
+    .custom-dropdown.open .dropdown-menu {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1);
+    }
+    .dropdown-search-wrapper {
+      padding: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .dropdown-search-input {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface-accent);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 0.85rem;
+    }
+    .dropdown-search-input:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+    .dropdown-options-list {
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 0.25rem 0;
+    }
+    .dropdown-option-item {
+      padding: 0.6rem 0.85rem;
+      font-size: 0.88rem;
+      cursor: pointer;
+      color: var(--text-primary);
+      transition: background-color var(--transition-fast);
+    }
+    .dropdown-option-item:hover {
+      background-color: var(--bg-surface-hover);
+    }
+    .dropdown-option-item.selected {
+      background-color: var(--accent-light);
+      color: var(--accent-color);
+      font-weight: 600;
+    }
+    .dropdown-no-results {
+      padding: 1rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    /* ── ENGINE SWITCHER (SEGMENTED CONTROL) ── */
+    .engine-switcher {
+      display: flex;
+      background: var(--bg-surface-accent);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+    .engine-tab {
+      flex: 1;
+      padding: 0.55rem;
+      text-align: center;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      transition: all var(--transition-fast);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+    .engine-tab.active {
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--border-color);
+    }
+    .engine-tab svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .lang-row {
       display: grid;
       grid-template-columns: 1fr auto 1fr;
-      gap: 0.75rem;
       align-items: end;
-      margin: 1.25rem 0;
+      gap: 0.75rem;
     }
-    .field label {
-      display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-2);
-      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;
-    }
-    select, textarea, input[type="email"] {
-      width: 100%; padding: 0.55rem 0.75rem;
-      border: 1px solid var(--border-strong); border-radius: var(--radius);
-      background: var(--surface); color: var(--text); font-size: 0.9rem;
-      font-family: inherit; appearance: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,106,79,0.12); }
-
     .swap-btn {
-      background: var(--surface); border: 1px solid var(--border-strong);
-      border-radius: var(--radius); width: 38px; height: 38px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
-      transition: background 0.15s; color: var(--text-2); margin-bottom: 0; align-self: end;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface-accent);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-fast);
     }
-    .swap-btn:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+    .swap-btn:hover {
+      border-color: var(--accent-color);
+      background: var(--accent-light);
+      color: var(--accent-color);
+      transform: rotate(180deg);
+    }
 
-    /* ── Context ── */
-    .context-section { margin-bottom: 1.25rem; }
-    .context-section label {
-      display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-2);
-      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem;
+    /* ── WORKSPACE SCREEN ── */
+    .workspace-header {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1rem 1.5rem;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
     }
-    .context-hint { font-size: 0.78rem; color: var(--text-3); margin-top: 0.3rem; }
-    textarea { resize: vertical; min-height: 56px; line-height: 1.5; }
+    .file-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .file-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: var(--accent-light);
+      color: var(--accent-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .file-icon svg { width: 22px; height: 22px; }
+    .file-details h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      max-width: 250px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-details p {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
 
-    /* ── Action row ── */
-    .action-row { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1.5rem; }
-    .btn-primary {
-      background: var(--accent); color: #fff; border: none; border-radius: var(--radius);
-      padding: 0.6rem 1.4rem; font-size: 0.92rem; font-weight: 600; cursor: pointer;
-      display: flex; align-items: center; gap: 0.45rem;
-      transition: background 0.15s, transform 0.1s;
+    .editor-status-bar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      padding: 0.75rem 1.25rem;
+      border-radius: 12px;
     }
-    .btn-primary:hover { background: #235c42; }
-    .btn-primary:active { transform: scale(0.98); }
-    .btn-primary:disabled { background: #aaa; cursor: not-allowed; transform: none; }
-    .btn-secondary {
-      background: var(--surface); color: var(--text); border: 1px solid var(--border-strong);
-      border-radius: var(--radius); padding: 0.6rem 1.2rem; font-size: 0.9rem; font-weight: 500;
-      cursor: pointer; display: flex; align-items: center; gap: 0.4rem;
-      transition: background 0.15s;
+    .progress-radial {
+      position: relative;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: conic-gradient(var(--accent-color) 0%, var(--bg-surface-accent) 0%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .btn-secondary:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent-text); }
-    .btn-secondary:disabled { color: var(--text-3); cursor: not-allowed; }
+    .progress-radial::after {
+      content: '';
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--bg-surface);
+    }
+    .progress-val {
+      position: relative;
+      z-index: 2;
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
 
-    /* ── Status ── */
-    .status {
-      display: none; align-items: center; gap: 0.75rem;
-      padding: 0.75rem 1rem; border-radius: var(--radius);
-      font-size: 0.88rem; margin-bottom: 1.25rem;
-      border: 1px solid var(--border);
+    /* ── TRANSLATOR CONTROL BAR ── */
+    .control-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1rem;
+      box-shadow: var(--card-shadow);
     }
-    .status.visible { display: flex; }
-    .status.working { background: var(--accent-light); border-color: #a3d9be; color: var(--accent-text); }
-    .status.done { background: #ecfdf5; border-color: #6ee7b7; color: #065f46; }
-    .status.error { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
-    .status.warning { background: var(--warn-bg); border-color: #fbbf24; color: var(--warn); }
-    .progress-track { flex: 1; height: 5px; background: rgba(0,0,0,0.1); border-radius: 99px; overflow: hidden; }
-    .progress-fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.3s ease; }
+    .control-left, .control-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    /* SEARCH & FIND/REPLACE BAR ── */
+    .search-input-wrapper {
+      position: relative;
+      min-width: 240px;
+    }
+    .search-input-wrapper svg {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-secondary);
+      width: 16px;
+      height: 16px;
+    }
+    .search-input-wrapper input {
+      padding-left: 2rem;
+    }
+
+    .find-replace-panel {
+      background: var(--bg-surface-accent);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1rem;
+      animation: slideDown var(--transition-normal);
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fr-inputs {
+      display: flex;
+      gap: 0.5rem;
+      flex: 1;
+      min-width: 320px;
+    }
+
+    /* ── EDITOR AREA (SUBTITLE STUDIO) ── */
+    .subtitle-editor-studio {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    .studio-header {
+      display: grid;
+      grid-template-columns: 50px 150px 1fr 1fr 60px;
+      background: var(--bg-surface-accent);
+      border-bottom: 1px solid var(--border-color);
+      font-weight: 600;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .studio-header-cell {
+      padding: 0.8rem 1rem;
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+    }
+    .studio-header-cell:last-child { border-right: none; }
+
+    .studio-body {
+      max-height: 520px;
+      overflow-y: auto;
+      content-visibility: auto;
+    }
+
+    .studio-row {
+      display: grid;
+      grid-template-columns: 50px 150px 1fr 1fr 60px;
+      border-bottom: 1px solid var(--border-color);
+      transition: background-color var(--transition-fast);
+      position: relative;
+    }
+    .studio-row:last-child { border-bottom: none; }
+    .studio-row:hover {
+      background-color: var(--bg-surface-hover);
+    }
+    .studio-row.active {
+      background-color: var(--accent-light);
+    }
+
+    /* Status based row states */
+    .studio-row.translating {
+      background-color: rgba(59, 130, 246, 0.05);
+    }
+    .studio-row.success {
+      background-color: rgba(16, 185, 129, 0.02);
+    }
+    .studio-row.error {
+      background-color: rgba(239, 68, 68, 0.04);
+    }
+
+    .studio-cell {
+      padding: 0.75rem 1rem;
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      align-items: flex-start;
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+    .studio-cell:last-child { border-right: none; }
+
+    .cell-index {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      justify-content: center;
+      align-items: center;
+    }
+    .cell-time {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.25rem;
+    }
+    .time-badge {
+      display: block;
+      background: var(--bg-surface-accent);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+    }
+    .cell-original {
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--text-primary);
+    }
+    .cell-translation {
+      padding: 0.5rem;
+    }
+    .translation-textarea {
+      width: 100%;
+      height: 100%;
+      min-height: 38px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 0.88rem;
+      line-height: 1.5;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      resize: none;
+      transition: all var(--transition-fast);
+      overflow-y: hidden;
+    }
+    .translation-textarea:hover {
+      background: var(--bg-surface-accent);
+      border-color: var(--border-color);
+    }
+    .translation-textarea:focus {
+      outline: none;
+      background: var(--bg-surface);
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 2px var(--focus-ring);
+    }
+    .translation-textarea.translating-placeholder {
+      font-style: italic;
+      color: var(--text-muted);
+    }
+
+    .cell-actions {
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+    }
+    .row-action-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      padding: 0;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    .row-action-btn:hover {
+      background: var(--bg-surface-accent);
+      border-color: var(--border-color-hover);
+      color: var(--text-primary);
+    }
+    .row-action-btn svg { width: 14px; height: 14px; }
+
+    /* Match Highlight */
+    mark {
+      background-color: #fef08a;
+      color: #000000;
+      border-radius: 2px;
+      padding: 0 1px;
+    }
+
+    /* ── STATUS FLOATER ── */
+    .status-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.85rem 1.25rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color-hover);
+      border-radius: 12px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+      font-size: 0.88rem;
+      color: var(--text-primary);
+      opacity: 0;
+      transition: all var(--transition-slow);
+    }
+    .status-toast.visible {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    .status-toast.success { border-left: 4px solid var(--success-color); }
+    .status-toast.error { border-left: 4px solid var(--error-color); }
+    .status-toast.warning { border-left: 4px solid var(--warning-color); }
+    .status-toast.working { border-left: 4px solid var(--accent-color); }
+
+    .toast-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+    }
     .spinner {
-      width: 16px; height: 16px; border: 2px solid rgba(45,106,79,0.25);
-      border-top-color: var(--accent); border-radius: 50%;
-      animation: spin 0.7s linear infinite; flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border-color);
+      border-top-color: var(--accent-color);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Aviso límite ── */
-    .rate-note {
-      font-size: 0.8rem; color: var(--text-3);
-      background: var(--surface-2); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 0.5rem 0.85rem; margin-bottom: 1.25rem;
+    /* ── MODAL SETTINGS ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-normal);
     }
-    .rate-note strong { color: var(--text-2); }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-content {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color-hover);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 480px;
+      padding: 2rem;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+      transform: scale(0.93) translateY(10px);
+      transition: all var(--transition-normal);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .modal-overlay.open .modal-content {
+      transform: scale(1) translateY(0);
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.75rem;
+    }
+    .modal-header h3 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
 
-    /* ── Editor ── */
-    .editor {
-      display: none;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      background: var(--surface);
-    }
-    .editor.visible { display: block; }
-
-    .editor-toolbar {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0.7rem 1rem; background: var(--surface-2);
-      border-bottom: 1px solid var(--border);
-    }
-    .editor-meta { font-size: 0.85rem; color: var(--text-2); display: flex; align-items: center; gap: 0.5rem; }
+    /* ── INFO UTILS ── */
     .badge {
-      font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 99px;
-      text-transform: uppercase; letter-spacing: 0.04em;
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-radius: 99px;
     }
-    .badge.ok { background: #d1fae5; color: #065f46; }
-    .badge.pending { background: var(--warn-bg); color: var(--warn); }
+    .badge-success { background: var(--success-bg); color: var(--success-color); }
+    .badge-warning { background: var(--warning-bg); color: var(--warning-color); }
+    .badge-error { background: var(--error-bg); color: var(--error-color); }
+    .badge-accent { background: var(--accent-light); color: var(--accent-color); }
 
-    .subtitle-table { width: 100%; }
-    .col-headers {
-      display: grid; grid-template-columns: 48px 148px 1fr 1fr;
-      background: var(--surface-2); border-bottom: 1px solid var(--border-strong);
-      position: sticky; top: 0; z-index: 2;
+    /* ── WORKSPACE LAYOUT & VIDEO PANEL ── */
+    .workspace-layout-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      align-items: start;
     }
-    .col-headers span {
-      padding: 0.45rem 0.75rem; font-size: 0.72rem; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3);
-      border-right: 1px solid var(--border);
+    @media (min-width: 1024px) {
+      .workspace-layout-grid {
+        grid-template-columns: 360px 1fr;
+      }
     }
-    .col-headers span:last-child { border-right: none; }
+    @media (min-width: 1200px) {
+      .workspace-layout-grid {
+        grid-template-columns: 420px 1fr;
+      }
+    }
 
-    .rows-wrap { max-height: 520px; overflow-y: auto; }
-
-    .sub-row {
-      display: grid; grid-template-columns: 48px 148px 1fr 1fr;
-      border-bottom: 1px solid var(--border);
-      transition: background 0.1s;
+    .video-studio-panel {
+      position: sticky;
+      top: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 1.25rem;
+      z-index: 20;
     }
-    .sub-row:last-child { border-bottom: none; }
-    .sub-row:hover { background: #fafaf8; }
-    .sub-row.is-translating { background: var(--accent-light); }
-    .sub-row.is-done { background: #fff; }
-    .sub-row.is-error { background: #fef2f2; }
 
-    .cell {
-      padding: 0.55rem 0.75rem; font-size: 0.85rem;
-      border-right: 1px solid var(--border); display: flex; align-items: flex-start;
+    .video-container-wrapper {
+      position: relative;
+      width: 100%;
+      background: #000000;
+      border-radius: 12px;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .cell:last-child { border-right: none; }
-    .cell.c-num { color: var(--text-3); font-size: 0.78rem; justify-content: center; align-items: center; font-variant-numeric: tabular-nums; }
-    .cell.c-time { font-family: 'Courier New', monospace; font-size: 0.72rem; color: var(--text-2); align-items: center; line-height: 1.7; }
-    .cell.c-orig { color: var(--text); white-space: pre-wrap; word-break: break-word; }
-    .cell.c-trans { padding: 0.4rem 0.6rem; }
-    .cell.c-trans textarea {
-      width: 100%; background: transparent; border: none; border-radius: 4px;
-      font-size: 0.85rem; color: var(--text); font-family: inherit;
-      line-height: 1.5; resize: none; min-height: 20px; padding: 2px 4px;
-      transition: background 0.1s;
-    }
-    .cell.c-trans textarea:focus { outline: none; background: rgba(45,106,79,0.06); }
-    .cell.c-trans textarea.pending { color: var(--text-3); font-style: italic; }
 
-    /* ── Footer ── */
-    footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.8rem; color: var(--text-3); }
-    footer a { color: var(--accent); text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
+    #studio-video-element {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .video-subtitle-overlay {
+      position: absolute;
+      bottom: 8%;
+      left: 6%;
+      right: 6%;
+      text-align: center;
+      color: #ffffff;
+      font-size: 0.95rem;
+      font-weight: 500;
+      text-shadow: 0 2px 4px #000000, 0 0 8px #000000;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 0.35rem 0.7rem;
+      border-radius: 6px;
+      line-height: 1.4;
+      pointer-events: none;
+      word-break: break-word;
+      transition: opacity 0.15s ease;
+      z-index: 10;
+    }
+
+    .video-drop-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      text-align: center;
+      padding: 2.5rem 1rem;
+      border: 2px dashed var(--border-color);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all var(--transition-normal);
+      aspect-ratio: 16/9;
+    }
+    .video-drop-zone:hover {
+      border-color: var(--accent-color);
+      background: var(--accent-light);
+    }
+    .video-drop-zone svg {
+      transition: transform var(--transition-normal);
+    }
+    .video-drop-zone:hover svg {
+      transform: scale(1.08);
+      color: var(--accent-color) !important;
+    }
+
+    .editor-studio-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      min-width: 0;
+    }
+
+    /* Active Highlight during Playback */
+    .studio-row.active-playing {
+      background-color: var(--accent-light);
+      border-left: 3px solid var(--accent-color);
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      margin-top: 4rem;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    footer a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color var(--transition-fast);
+    }
+    footer a:hover {
+      color: var(--accent-color);
+    }
   </style>
 </head>
-<body>
-<div class="page">
+<body class="theme-dark">
 
-  <header>
-    <h1>Traductor de subtítulos SRT <span class="tag">Gratuito</span></h1>
-    <p>Sube un archivo .srt, elige el idioma de destino y descarga la traducción. Sin registro, sin coste.</p>
-  </header>
+<div class="app-container">
 
-  <!-- Drop zone -->
-  <div class="drop-zone" id="drop-zone">
-    <input type="file" id="file-input" accept=".srt,.txt" aria-label="Seleccionar archivo SRT">
-    <div class="dz-icon">📄</div>
-    <div class="dz-title">Arrastra tu archivo .srt aquí</div>
-    <div class="dz-sub">o haz clic para seleccionarlo</div>
-    <div class="dz-formats">Archivos .srt · Codificación UTF-8 o latin-1</div>
-  </div>
-
-  <!-- Language controls -->
-  <div class="controls">
-    <div class="field">
-      <label for="lang-from">Idioma de origen</label>
-      <select id="lang-from"></select>
+  <!-- TOP NAV BAR -->
+  <nav class="top-nav">
+    <a href="#" class="brand" aria-label="Traductor SRT">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        <path d="M10 8h4M10 12h4M7 8h.01M7 12h.01"></path>
+      </svg>
+      <span class="brand-title">Traductor SRT</span>
+    </a>
+    <div class="nav-actions">
+      <button class="btn btn-icon-only" id="theme-toggle" title="Cambiar tema" aria-label="Cambiar tema">
+        <!-- Sun icon (will render inside JS) -->
+      </button>
+      <button class="btn btn-icon-only" id="settings-btn" title="Configuración" aria-label="Configuración">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
     </div>
-    <button class="swap-btn" id="swap-btn" title="Intercambiar idiomas" aria-label="Intercambiar idiomas">⇄</button>
-    <div class="field">
-      <label for="lang-to">Idioma de destino</label>
-      <select id="lang-to"></select>
-    </div>
-  </div>
+  </nav>
 
-  <!-- Context -->
-  <div class="context-section">
-    <label for="ctx-input">Contexto del contenido <span style="font-weight:400;text-transform:none;letter-spacing:0">(opcional pero recomendado)</span></label>
-    <textarea id="ctx-input" rows="2" placeholder="Ej: Documental sobre historia medieval catalana. Tono formal. Narrador en tercera persona."></textarea>
-    <p class="context-hint">Describir el contenido mejora la coherencia de la traducción, especialmente para términos técnicos o dialectales.</p>
-  </div>
-
-  <!-- MyMemory rate note -->
-  <div class="rate-note">
-    ⚡ Usa la API gratuita de <strong>MyMemory</strong>. Límite: ~5.000 palabras/día por IP. Para archivos grandes, añade tu email (opcional) para ampliar el límite a ~50.000 palabras/día.
-    <br><input type="email" id="mymemory-email" placeholder="tu@email.com (opcional, para aumentar límite)" style="margin-top:6px;max-width:340px;">
-  </div>
-
-  <!-- Actions -->
-  <div class="action-row">
-    <button class="btn-primary" id="translate-btn" disabled>▶ Traducir</button>
-    <button class="btn-secondary" id="download-btn" disabled>⬇ Descargar .srt</button>
-    <button class="btn-secondary" id="clear-btn" style="display:none">✕ Nuevo archivo</button>
-  </div>
-
-  <!-- Status -->
-  <div class="status" id="status-bar" role="status" aria-live="polite"></div>
-
-  <!-- Editor -->
-  <div class="editor" id="editor">
-    <div class="editor-toolbar">
-      <div class="editor-meta">
-        <span id="editor-count">0 subtítulos</span>
-        <span class="badge pending" id="editor-badge">Sin traducir</span>
+  <!-- ── UNIFIED WORKSPACE LAYOUT GRID ── -->
+  <div class="workspace-layout-grid">
+    
+    <!-- Left Column: Video Studio Panel (Always Visible) -->
+    <div class="video-studio-panel panel">
+      <div class="panel-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+          <polygon points="23 7 16 12 23 17 23 7"></polygon>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+        </svg>
+        Sincronización de Vídeo
       </div>
-      <div style="font-size:0.8rem;color:var(--text-3)">Edita las traducciones directamente antes de descargar</div>
-    </div>
-    <div class="subtitle-table">
-      <div class="col-headers">
-        <span>#</span><span>Tiempo</span><span>Original</span><span>Traducción</span>
+      
+      <div class="video-container-wrapper hidden" id="video-wrapper">
+        <video id="studio-video-element" controls></video>
+        <div class="video-subtitle-overlay hidden" id="video-subtitle-overlay"></div>
       </div>
-      <div class="rows-wrap" id="rows-wrap"></div>
+      
+      <div class="video-drop-zone" id="video-drop-zone">
+        <input type="file" id="video-file-input" accept="video/*" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="38" height="38" style="margin-bottom:0.4rem; color:var(--text-secondary);">
+          <polygon points="23 7 16 12 23 17 23 7"></polygon>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+        </svg>
+        <p style="font-weight:600; font-size:0.8rem; margin-bottom:0.25rem;">Cargar vídeo local</p>
+        <span style="font-size:0.72rem; color:var(--text-muted);">Arrastra tu vídeo aquí o haz clic para seleccionarlo</span>
+      </div>
+      
+      <div class="hidden" id="video-meta-control" style="display:flex; justify-content:space-between; align-items:center; width:100%; font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem;">
+        <span id="video-loaded-name" style="text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:180px; font-weight:500;">video.mp4</span>
+        <button class="btn" id="btn-remove-video" style="padding:0.2rem 0.5rem; font-size:0.7rem; border-radius:6px; border-color:var(--error-color); color:var(--error-color); background:transparent;">Quitar</button>
+      </div>
+
+      <!-- Segmented subtitle switcher control -->
+      <div class="hidden" id="video-subtitles-control" style="display:flex; flex-direction:column; gap:0.5rem; width:100%; border-top: 1px solid var(--border-color); padding-top:0.75rem; margin-top:0.5rem;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap: 0.5rem;">
+          <span style="font-size:0.75rem; font-weight:600; color:var(--text-secondary);">Subtítulos:</span>
+          <div class="engine-switcher" style="padding: 2px; border-radius: 8px;">
+            <div class="engine-tab active" data-submode="trans" style="padding:0.25rem 0.5rem; font-size:0.7rem; border-radius:6px;" id="sub-mode-trans">Traducidos</div>
+            <div class="engine-tab" data-submode="orig" style="padding:0.25rem 0.5rem; font-size:0.7rem; border-radius:6px;" id="sub-mode-orig">Original</div>
+            <div class="engine-tab" data-submode="off" style="padding:0.25rem 0.5rem; font-size:0.7rem; border-radius:6px;" id="sub-mode-off">Desactivar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Right Column: Subtitle Panel (Dual States: Upload VS Editor) -->
+    <div class="editor-studio-panel">
+      
+      <!-- STATE 1: SRT FILE UPLOAD & CONFIG (Shown initially) -->
+      <div id="right-panel-upload" class="screen">
+        <div class="hero" style="margin: 0.5rem auto 1.5rem; text-align: left;">
+          <h2 style="font-size: 2.2rem; line-height: 1.2; margin-bottom: 0.5rem;">Traducción de Subtítulos.<br>Simplificada y Profesional.</h2>
+          <p>Sube archivos SRT y tradúcelos automáticamente en segundos. Sincroniza tu vídeo en vivo y edita en tiempo real.</p>
+        </div>
+
+        <!-- SRT Drop Zone -->
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept=".srt,.txt" aria-label="Seleccionar archivo SRT">
+          <div class="dz-icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="18" x2="12" y2="12"></line>
+              <polyline points="9 15 12 12 15 15"></polyline>
+            </svg>
+          </div>
+          <div class="dz-title">Arrastra tu archivo .srt aquí</div>
+          <div class="dz-sub">o haz clic para examinar en tu dispositivo</div>
+          <div class="dz-formats">Codificación recomendada UTF-8 · Archivos de subtítulos SRT</div>
+        </div>
+
+        <!-- Configuration Panels (Engines & Languages) -->
+        <div class="setup-grid">
+          <!-- Engine Config Panel -->
+          <div class="panel">
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+              Motor de Traducción
+            </div>
+            
+            <div class="form-group">
+              <label>Seleccionar Motor</label>
+              <div class="engine-switcher">
+                <div class="engine-tab active" data-engine="mymemory">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                  MyMemory (Gratis)
+                </div>
+                <div class="engine-tab" data-engine="gemini">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                  Gemini AI (Pro)
+                </div>
+              </div>
+            </div>
+
+            <!-- Engine Note for MyMemory -->
+            <div class="engine-specific" id="info-mymemory">
+              <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.4;">
+                Utiliza la API gratuita de MyMemory. <strong>No requiere configuración ni claves, funciona al instante</strong>. Traduce subtítulo a subtítulo. Límite diario de ~5.000 palabras por IP.
+              </p>
+            </div>
+
+            <!-- Engine Settings for Gemini -->
+            <div class="engine-specific hidden" id="info-gemini">
+              <div class="form-group" style="margin-bottom: 0.50rem;">
+                <label for="gemini-key-input">API Key de Gemini</label>
+                <div class="input-wrapper">
+                  <input type="password" id="gemini-key-input" class="input-field" placeholder="AIzaSy...">
+                  <button class="btn btn-primary input-btn-inside" id="verify-gemini-btn">Verificar</button>
+                </div>
+                <p style="font-size:0.75rem; color:var(--text-muted);">
+                  Consigue una clave de Gemini <a href="https://aistudio.google.com/" target="_blank" rel="noopener" style="color:var(--accent-color); text-decoration:underline;">100% gratuita aquí</a> en 30 segundos.
+                </p>
+                <div style="margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.18); display: flex; align-items: flex-start; gap: 8px; font-size: 0.76rem; line-height: 1.35; color: var(--text-secondary);">
+                  <span style="font-size: 0.95rem; line-height: 1; filter: grayscale(100%) brightness(1.2);">🛡️</span>
+                  <div>
+                    <strong>Seguridad y Privacidad:</strong> Tu API Key se almacena <u>exclusivamente</u> de forma local en tu navegador (localStorage) y se envía de forma directa a la API oficial de Google Gemini. Esta aplicación es 100% estática (del lado del cliente), sin servidores intermedios ni base de datos, lo que garantiza que nadie más puede acceder a tu clave.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Languages Panel -->
+          <div class="panel">
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              Configuración de Idiomas
+            </div>
+            
+            <div class="lang-row">
+              <div class="form-group">
+                <label>Origen</label>
+                <div id="drop-lang-from"></div>
+              </div>
+              
+              <button class="swap-btn" id="swap-btn" title="Intercambiar idiomas" aria-label="Intercambiar idiomas">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                  <polyline points="16 3 21 8 16 13"></polyline>
+                  <line x1="21" y1="8" x2="9" y2="8"></line>
+                  <polyline points="8 21 3 16 8 11"></polyline>
+                  <line x1="3" y1="16" x2="15" y2="16"></line>
+                </svg>
+              </button>
+              
+              <div class="form-group">
+                <label>Destino</label>
+                <div id="drop-lang-to"></div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="context-input">Contexto de la obra <span style="font-weight:400;text-transform:none;color:var(--text-muted)">(Opcional para IA)</span></label>
+              <input type="text" id="context-input" class="input-field" placeholder="Ej: Película de acción, lenguaje informal y callejero, protagonista masculino.">
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- STATE 2: ACTIVE EDITOR (Hidden initially) -->
+      <div id="right-panel-editor" class="screen hidden">
+        <!-- Workspace Header -->
+        <div class="workspace-header">
+          <div class="file-info">
+            <div class="file-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+            </div>
+            <div class="file-details">
+              <h3 id="work-file-name">subtitulos.srt</h3>
+              <p id="work-file-meta">0 subtítulos · UTF-8</p>
+            </div>
+          </div>
+
+          <!-- Live progress status -->
+          <div class="editor-status-bar hidden" id="editor-progress-bar">
+            <div class="progress-radial" id="radial-progress-element">
+              <div class="progress-val" id="radial-progress-value">0%</div>
+            </div>
+            <div style="font-size:0.85rem;">
+              <span style="font-weight:600;" id="progress-status-title">Traduciendo...</span>
+              <p style="font-size:0.75rem; color:var(--text-secondary);" id="progress-status-sub">0 de 0 subtítulos</p>
+            </div>
+          </div>
+
+          <!-- Quick actions -->
+          <div style="display:flex; gap:0.5rem;">
+            <button class="btn btn-primary" id="btn-run-translation">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              Traducir Todo
+            </button>
+            <button class="btn btn-primary" id="btn-download" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Descargar SRT
+            </button>
+            <button class="btn" id="btn-new-file" title="Cargar nuevo archivo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M12 5v14M5 12h14"></path></svg>
+              Nuevo
+            </button>
+          </div>
+        </div>
+
+        <!-- Control & Search Bar -->
+        <div class="control-bar">
+          <div class="control-left">
+            <!-- Search -->
+            <div class="search-input-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="studio-search-input" class="input-field" placeholder="Buscar en texto...">
+            </div>
+            
+            <button class="btn" id="btn-toggle-find-replace" title="Buscar y Reemplazar masivamente">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              Buscar y Reemplazar
+            </button>
+
+            <button class="btn" id="btn-toggle-filter-only" title="Mostrar solo los subtítulos con errores o sin traducción">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+              Filtrar Incompletos / Errores
+            </button>
+          </div>
+
+          <div class="control-right">
+            <!-- Badge indicator of languages -->
+            <span class="badge badge-accent" id="badge-lang-mapping">ES → EN</span>
+            <span class="badge badge-warning" id="badge-engine-type">MyMemory</span>
+          </div>
+        </div>
+
+        <!-- Bulk Find & Replace Drawer -->
+        <div class="find-replace-panel hidden" id="find-replace-panel">
+          <div class="fr-inputs">
+            <input type="text" id="find-input" class="input-field" placeholder="Texto original a buscar...">
+            <input type="text" id="replace-input" class="input-field" placeholder="Reemplazar con...">
+          </div>
+          <div style="display:flex; gap:0.5rem;">
+            <button class="btn btn-primary" id="btn-do-replace-all">Reemplazar Todo</button>
+            <button class="btn" id="btn-close-fr">Cerrar</button>
+          </div>
+        </div>
+
+        <!-- Subtitle Table Viewport -->
+        <div class="subtitle-editor-studio">
+          <div class="studio-header">
+            <div class="studio-header-cell cell-index">#</div>
+            <div class="studio-header-cell">Tiempo</div>
+            <div class="studio-header-cell">Original</div>
+            <div class="studio-header-cell">Traducción</div>
+            <div class="studio-header-cell cell-actions"></div>
+          </div>
+          <div class="studio-body" id="studio-body-rows">
+            <!-- Subtitle Rows will render here -->
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
+  <!-- ── FOOTER ── -->
   <footer>
-    Motor de traducción: <a href="https://mymemory.translated.net" target="_blank" rel="noopener">MyMemory</a> · Código abierto · Sin cookies · Sin tracking
+    <p>Traductor SRT es un traductor de subtítulos de grado profesional. Diseñado para simplificar tu flujo de trabajo.</p>
+    <div>
+      Motor de traducción: <a href="https://mymemory.translated.net" target="_blank" rel="noopener">MyMemory API</a> · 
+      IA: <a href="https://deepmind.google/technologies/gemini/" target="_blank" rel="noopener">Gemini Pro API</a>
+    </div>
   </footer>
 
 </div>
 
+<!-- ── SETTINGS MODAL ── -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Configuración Global</h3>
+      <button class="btn btn-icon-only" style="border:none; background:transparent;" id="settings-close" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+          <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="form-group">
+      <label for="mymemory-email-input">Correo electrónico (MyMemory)</label>
+      <input type="email" id="mymemory-email-input" class="input-field" placeholder="tu@correo.com">
+      <p style="font-size:0.75rem; color:var(--text-muted); line-height:1.3;">
+        Opcional. Te otorga un límite extendido de hasta 50.000 palabras al día de forma gratuita.
+      </p>
+    </div>
+
+    <div class="form-group">
+      <label for="gemini-key-modal">Clave API de Gemini</label>
+      <input type="password" id="gemini-key-modal" class="input-field" placeholder="AIzaSy...">
+      <p style="font-size:0.75rem; color:var(--text-muted); line-height:1.3;">
+        Obligatoria si usas el motor de traducción Gemini AI. Puedes conseguir una clave de Gemini <a href="https://aistudio.google.com/" target="_blank" rel="noopener" style="color:var(--accent-color); text-decoration:underline;">100% gratuita aquí</a>.
+      </p>
+      <div style="margin-top: 6px; padding: 8px 10px; border-radius: 8px; background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.18); display: flex; align-items: flex-start; gap: 8px; font-size: 0.74rem; line-height: 1.3; color: var(--text-secondary);">
+        <span style="filter: grayscale(100%) brightness(1.2);">🛡️</span>
+        <span><strong>100% Privado:</strong> Tu clave nunca sale de tu dispositivo excepto para comunicarse directamente con la API oficial de Google.</span>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="settings-save-btn" style="width:100%;">Guardar y Aplicar</button>
+  </div>
+</div>
+
+<!-- ── TOAST STATUS NOTIFICATION ── -->
+<div class="status-toast" id="status-toast" role="status" aria-live="polite">
+  <div class="toast-icon" id="toast-icon"></div>
+  <div id="toast-message">Procesando petición...</div>
+</div>
+
 <script>
-/* ── Idiomas soportados por MyMemory ── */
+/* ── LANGUAGES DEFINITION ── */
 const LANGS = [
-  { code: 'ca', label: 'Catalán (català)' },
-  { code: 'gl', label: 'Gallego (galego)' },
-  { code: 'eu', label: 'Euskera (euskara)' },
   { code: 'es', label: 'Español' },
   { code: 'en', label: 'Inglés' },
-  { code: 'fr', label: 'Francés' },
-  { code: 'pt', label: 'Portugués' },
+  { code: 'ca', label: 'Catalán (Català)' },
+  { code: 'gl', label: 'Gallego (Galego)' },
+  { code: 'eu', label: 'Euskera (Euskara)' },
+  { code: 'fr', label: 'Francés (Français)' },
+  { code: 'pt', label: 'Portugués (Português)' },
   { code: 'it', label: 'Italiano' },
-  { code: 'de', label: 'Alemán' },
-  { code: 'nl', label: 'Neerlandés' },
-  { code: 'ro', label: 'Rumano' },
+  { code: 'de', label: 'Alemán (Deutsch)' },
+  { code: 'nl', label: 'Neerlandés (Nederlands)' },
+  { code: 'ro', label: 'Rumano (Română)' },
   { code: 'ru', label: 'Ruso' },
   { code: 'uk', label: 'Ucraniano' },
   { code: 'pl', label: 'Polaco' },
@@ -328,20 +1454,20 @@ const LANGS = [
   { code: 'sr', label: 'Serbio' },
   { code: 'hr', label: 'Croata' },
   { code: 'hu', label: 'Húngaro' },
-  { code: 'sv', label: 'Sueco' },
-  { code: 'no', label: 'Noruego' },
-  { code: 'da', label: 'Danés' },
+  { code: 'sv', label: 'Sueco (Svenska)' },
+  { code: 'no', label: 'Noruego (Norsk)' },
+  { code: 'da', label: 'Danés (Dansk)' },
   { code: 'fi', label: 'Finlandés' },
   { code: 'el', label: 'Griego' },
   { code: 'tr', label: 'Turco' },
   { code: 'ar', label: 'Árabe' },
   { code: 'he', label: 'Hebreo' },
-  { code: 'fa', label: 'Persa (farsi)' },
+  { code: 'fa', label: 'Persa' },
   { code: 'hi', label: 'Hindi' },
   { code: 'ur', label: 'Urdu' },
   { code: 'bn', label: 'Bengalí' },
-  { code: 'ja', label: 'Japonés' },
-  { code: 'ko', label: 'Coreano' },
+  { code: 'ja', label: 'Japonés (日本語)' },
+  { code: 'ko', label: 'Coreano (한국어)' },
   { code: 'zh', label: 'Chino simplificado' },
   { code: 'zh-TW', label: 'Chino tradicional' },
   { code: 'vi', label: 'Vietnamita' },
@@ -350,261 +1476,1144 @@ const LANGS = [
   { code: 'ms', label: 'Malayo' },
 ];
 
-function buildSelect(sel, defaultCode) {
-  LANGS.forEach(l => {
-    const o = document.createElement('option');
-    o.value = l.code; o.textContent = l.label;
-    if (l.code === defaultCode) o.selected = true;
-    sel.appendChild(o);
-  });
+/* ── SEARCHABLE DROPDOWNS IMPLEMENTATION ── */
+class SearchableDropdown {
+  constructor(containerId, options, defaultValue, onChange) {
+    this.container = document.getElementById(containerId);
+    this.options = options;
+    this.value = defaultValue;
+    this.onChange = onChange;
+    this.isOpen = false;
+    this.init();
+  }
+  
+  init() {
+    this.container.classList.add('custom-dropdown');
+    
+    // Trigger Button
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'dropdown-trigger';
+    btn.innerHTML = `
+      <span class="dropdown-selected-label">${this.getLabel(this.value)}</span>
+      <svg class="dropdown-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    `;
+    
+    // Dropdown Menu Container
+    const menu = document.createElement('div');
+    menu.className = 'dropdown-menu';
+    
+    // Search Box
+    const searchWrapper = document.createElement('div');
+    searchWrapper.className = 'dropdown-search-wrapper';
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.className = 'dropdown-search-input';
+    searchInput.placeholder = 'Buscar idioma...';
+    searchWrapper.appendChild(searchInput);
+    menu.appendChild(searchWrapper);
+    
+    // Options List
+    const list = document.createElement('div');
+    list.className = 'dropdown-options-list';
+    menu.appendChild(list);
+    
+    this.container.appendChild(btn);
+    this.container.appendChild(menu);
+    
+    this.triggerBtn = btn;
+    this.menuEl = menu;
+    this.searchInput = searchInput;
+    this.listEl = list;
+    
+    this.renderOptions('');
+    
+    // Listeners
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggle();
+    });
+    
+    searchInput.addEventListener('input', (e) => {
+      this.renderOptions(e.target.value);
+    });
+    
+    searchInput.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+    
+    document.addEventListener('click', () => this.close());
+  }
+  
+  getLabel(code) {
+    const opt = this.options.find(o => o.code === code);
+    return opt ? opt.label : code;
+  }
+  
+  setValue(code) {
+    this.value = code;
+    this.triggerBtn.querySelector('.dropdown-selected-label').textContent = this.getLabel(code);
+    this.renderOptions(this.searchInput.value);
+    if (this.onChange) this.onChange(code);
+  }
+  
+  renderOptions(filterText) {
+    this.listEl.innerHTML = '';
+    const filtered = this.options.filter(o => 
+      o.label.toLowerCase().includes(filterText.toLowerCase()) || 
+      o.code.toLowerCase().includes(filterText.toLowerCase())
+    );
+    
+    if (filtered.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'dropdown-no-results';
+      empty.textContent = 'Sin resultados';
+      this.listEl.appendChild(empty);
+      return;
+    }
+    
+    filtered.forEach(opt => {
+      const item = document.createElement('div');
+      item.className = `dropdown-option-item ${opt.code === this.value ? 'selected' : ''}`;
+      item.textContent = opt.label;
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.setValue(opt.code);
+        this.close();
+      });
+      this.listEl.appendChild(item);
+    });
+  }
+  
+  toggle() {
+    if (this.isOpen) {
+      this.close();
+    } else {
+      document.querySelectorAll('.custom-dropdown').forEach(d => d.classList.remove('open'));
+      this.container.classList.add('open');
+      this.isOpen = true;
+      this.searchInput.value = '';
+      this.renderOptions('');
+      this.searchInput.focus();
+    }
+  }
+  
+  close() {
+    this.container.classList.remove('open');
+    this.isOpen = false;
+  }
 }
-buildSelect(document.getElementById('lang-from'), 'ca');
-buildSelect(document.getElementById('lang-to'), 'es');
 
-document.getElementById('swap-btn').addEventListener('click', () => {
-  const a = document.getElementById('lang-from').value;
-  const b = document.getElementById('lang-to').value;
-  document.getElementById('lang-from').value = b;
-  document.getElementById('lang-to').value = a;
-});
-
-/* ── Estado ── */
+/* ── STATE MANAGEMENT ── */
 let subtitles = [];
 let fileName = 'subtitulos_traducidos.srt';
+let activeEngine = 'mymemory';
+let currentTheme = 'dark';
 let isRunning = false;
+let filterIncomplete = false;
 
-/* ── Parsear SRT ── */
-function parseSRT(text) {
-  const clean = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
-  const blocks = clean.split(/\n{2,}/);
-  const result = [];
-  blocks.forEach(block => {
-    const lines = block.trim().split('\n');
-    if (lines.length < 2) return;
-    let i = 0;
-    // índice numérico opcional
-    const isNum = /^\d+$/.test(lines[0].trim());
-    const idx = isNum ? lines[i++].trim() : String(result.length + 1);
-    if (i >= lines.length) return;
-    if (!lines[i].includes('-->')) return;
-    const time = lines[i++].trim();
-    const content = lines.slice(i).join('\n').trim();
-    if (!content) return;
-    result.push({ idx, time, original: content, translation: '', error: false });
+// Searchable language select references
+let fromLangDropdown;
+let toLangDropdown;
+
+/* ── INITIALIZATION ── */
+document.addEventListener('DOMContentLoaded', () => {
+  // Load configuration from local storage
+  loadSettings();
+  
+  // Render theme icon and apply theme class
+  applyTheme(currentTheme);
+
+  // Initialize Custom dropdowns
+  fromLangDropdown = new SearchableDropdown('drop-lang-from', LANGS, 'en', (val) => updateBadgeMapping());
+  toLangDropdown = new SearchableDropdown('drop-lang-to', LANGS, 'es', (val) => updateBadgeMapping());
+  
+  // Set default settings input values
+  document.getElementById('mymemory-email-input').value = localStorage.getItem('mymemory_email') || '';
+  const geminiKey = localStorage.getItem('gemini_api_key') || '';
+  document.getElementById('gemini-key-input').value = geminiKey;
+  document.getElementById('gemini-key-modal').value = geminiKey;
+  
+  updateBadgeMapping();
+  updateEngineToggles();
+
+  // Engine Switchers Event
+  document.querySelectorAll('.engine-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      activeEngine = tab.dataset.engine;
+      updateEngineToggles();
+    });
   });
-  return result;
+
+  // Settings Actions
+  document.getElementById('settings-btn').addEventListener('click', () => {
+    document.getElementById('settings-modal').classList.add('open');
+  });
+  document.getElementById('settings-close').addEventListener('click', () => {
+    document.getElementById('settings-modal').classList.remove('open');
+  });
+  document.getElementById('settings-save-btn').addEventListener('click', saveModalSettings);
+
+  // Gemini key live inputs sync
+  document.getElementById('gemini-key-input').addEventListener('input', (e) => {
+    localStorage.setItem('gemini_api_key', e.target.value);
+    document.getElementById('gemini-key-modal').value = e.target.value;
+  });
+
+  // API Verification
+  document.getElementById('verify-gemini-btn').addEventListener('click', verifyGeminiKey);
+
+  // Theme Toggler
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    applyTheme(nextTheme);
+  });
+
+  // Swap Languages
+  document.getElementById('swap-btn').addEventListener('click', () => {
+    const fromCode = fromLangDropdown.value;
+    const toCode = toLangDropdown.value;
+    fromLangDropdown.setValue(toCode);
+    toLangDropdown.setValue(fromCode);
+  });
+
+  // Search & Filters inside Workspace
+  document.getElementById('studio-search-input').addEventListener('input', applyStudioFilters);
+  document.getElementById('btn-toggle-filter-only').addEventListener('click', () => {
+    filterIncomplete = !filterIncomplete;
+    const btn = document.getElementById('btn-toggle-filter-only');
+    if (filterIncomplete) {
+      btn.classList.add('btn-primary');
+    } else {
+      btn.classList.remove('btn-primary');
+    }
+    applyStudioFilters();
+  });
+
+  // Find & Replace Drawer Toggle
+  document.getElementById('btn-toggle-find-replace').addEventListener('click', () => {
+    const frPanel = document.getElementById('find-replace-panel');
+    frPanel.classList.toggle('hidden');
+    if (!frPanel.classList.contains('hidden')) {
+      document.getElementById('find-input').focus();
+    }
+  });
+  document.getElementById('btn-close-fr').addEventListener('click', () => {
+    document.getElementById('find-replace-panel').classList.add('hidden');
+  });
+  document.getElementById('btn-do-replace-all').addEventListener('click', performFindAndReplace);
+
+  // File Upload Handlers
+  const dz = document.getElementById('drop-zone');
+  dz.addEventListener('click', (e) => {
+    if (e.target.tagName !== 'INPUT') document.getElementById('file-input').click();
+  });
+  dz.addEventListener('dragover', e => {
+    e.preventDefault();
+    dz.classList.add('drag-over');
+  });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) loadSRTFile(e.dataTransfer.files[0]);
+  });
+  document.getElementById('file-input').addEventListener('change', e => {
+    if (e.target.files[0]) loadSRTFile(e.target.files[0]);
+  });
+
+  // Main Action buttons
+  document.getElementById('btn-run-translation').addEventListener('click', executeTranslationWork);
+  document.getElementById('btn-download').addEventListener('click', downloadSRTText);
+  document.getElementById('btn-new-file').addEventListener('click', resetWorkspace);
+
+  // Initialize Video Sync and Upload listeners
+  initVideoUpload();
+  initVideoSync();
+});
+
+/* ── SETTINGS & THEME HELPERS ── */
+function loadSettings() {
+  currentTheme = localStorage.getItem('theme') || 'dark';
+  activeEngine = localStorage.getItem('engine') || 'mymemory';
 }
 
-/* ── Cargar archivo ── */
-function tryDecode(buffer) {
-  // intenta UTF-8, luego latin-1
+function applyTheme(theme) {
+  currentTheme = theme;
+  localStorage.setItem('theme', theme);
+  document.body.className = `theme-${theme}`;
+  
+  const themeToggleBtn = document.getElementById('theme-toggle');
+  if (theme === 'dark') {
+    // Show Sun Icon for light mode
+    themeToggleBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+        <circle cx="12" cy="12" r="5"></circle>
+        <line x1="12" y1="1" x2="12" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="23"></line>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+        <line x1="1" y1="12" x2="3" y2="12"></line>
+        <line x1="21" y1="12" x2="23" y2="12"></line>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+      </svg>
+    `;
+  } else {
+    // Show Moon Icon for dark mode
+    themeToggleBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+      </svg>
+    `;
+  }
+}
+
+function updateEngineToggles() {
+  localStorage.setItem('engine', activeEngine);
+  document.querySelectorAll('.engine-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.engine === activeEngine);
+  });
+  
+  document.getElementById('info-mymemory').classList.toggle('hidden', activeEngine !== 'mymemory');
+  document.getElementById('info-gemini').classList.toggle('hidden', activeEngine !== 'gemini');
+  
+  const badgeEngine = document.getElementById('badge-engine-type');
+  if (badgeEngine) {
+    badgeEngine.textContent = activeEngine === 'mymemory' ? 'MyMemory' : 'Gemini AI';
+    badgeEngine.className = activeEngine === 'mymemory' ? 'badge badge-warning' : 'badge badge-accent';
+  }
+}
+
+function saveModalSettings() {
+  const email = document.getElementById('mymemory-email-input').value.trim();
+  const apiKey = document.getElementById('gemini-key-modal').value.trim();
+  
+  localStorage.setItem('mymemory_email', email);
+  localStorage.setItem('gemini_api_key', apiKey);
+  document.getElementById('gemini-key-input').value = apiKey;
+  
+  showToast('success', 'Configuración guardada correctamente.');
+  document.getElementById('settings-modal').classList.remove('open');
+}
+
+function updateBadgeMapping() {
+  const mapping = document.getElementById('badge-lang-mapping');
+  if (mapping && fromLangDropdown && toLangDropdown) {
+    mapping.textContent = `${fromLangDropdown.value.toUpperCase()} → ${toLangDropdown.value.toUpperCase()}`;
+  }
+}
+
+/* ── FILE HANDLING & PARSING ── */
+function tryDecodeFileContent(buffer) {
   try {
-    const text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
-    return text;
+    return new TextDecoder('utf-8', { fatal: true }).decode(buffer);
   } catch {
     return new TextDecoder('iso-8859-1').decode(buffer);
   }
 }
 
-document.getElementById('drop-zone').addEventListener('click', (e) => {
-  if (e.target.tagName !== 'INPUT') document.getElementById('file-input').click();
-});
-document.getElementById('drop-zone').addEventListener('dragover', e => { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); });
-document.getElementById('drop-zone').addEventListener('dragleave', () => document.getElementById('drop-zone').classList.remove('drag-over'));
-document.getElementById('drop-zone').addEventListener('drop', e => {
-  e.preventDefault();
-  document.getElementById('drop-zone').classList.remove('drag-over');
-  const f = e.dataTransfer.files[0];
-  if (f) loadFile(f);
-});
-document.getElementById('file-input').addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+function parseSRTTime(timeRangeStr) {
+  const parts = timeRangeStr.split('-->');
+  if (parts.length !== 2) return { start: 0, end: 0 };
+  
+  return {
+    start: timeStrToSeconds(parts[0]),
+    end: timeStrToSeconds(parts[1])
+  };
+}
 
-function loadFile(file) {
+function timeStrToSeconds(timeStr) {
+  const cleaned = timeStr.trim().replace('.', ',');
+  const parts = cleaned.split(':');
+  if (parts.length < 3) return 0;
+  
+  const hrs = parseInt(parts[0], 10) || 0;
+  const mins = parseInt(parts[1], 10) || 0;
+  
+  const secParts = parts[2].split(',');
+  const secs = parseInt(secParts[0], 10) || 0;
+  const ms = secParts[1] ? parseInt(secParts[1], 10) / 1000 : 0;
+  
+  return (hrs * 3600) + (mins * 60) + secs + ms;
+}
+
+function parseSRTContent(text) {
+  const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+  const blocks = normalized.split(/\n{2,}/);
+  const parsedSubtitles = [];
+  
+  blocks.forEach(block => {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) return;
+    
+    let index = 0;
+    const isNum = /^\d+$/.test(lines[0].trim());
+    const idx = isNum ? lines[index++].trim() : String(parsedSubtitles.length + 1);
+    
+    if (index >= lines.length) return;
+    if (!lines[index].includes('-->')) return;
+    
+    const time = lines[index++].trim();
+    const originalContent = lines.slice(index).join('\n').trim();
+    if (!originalContent) return;
+    
+    const timeRange = parseSRTTime(time);
+    
+    parsedSubtitles.push({
+      idx,
+      time,
+      startTime: timeRange.start,
+      endTime: timeRange.end,
+      original: originalContent,
+      translation: '',
+      status: 'pending' // pending, translating, success, error
+    });
+  });
+  
+  return parsedSubtitles;
+}
+
+function loadSRTFile(file) {
   fileName = file.name.replace(/\.srt$/i, '') + '_traducido.srt';
   const reader = new FileReader();
-  reader.onload = e => {
-    const text = tryDecode(e.target.result);
-    subtitles = parseSRT(text);
-    if (!subtitles.length) {
-      showStatus('error', '❌ No se encontraron subtítulos válidos. Comprueba que el archivo es un .srt correcto.');
+  
+  reader.onload = (e) => {
+    const rawText = tryDecodeFileContent(e.target.result);
+    subtitles = parseSRTContent(rawText);
+    
+    if (subtitles.length === 0) {
+      showToast('error', 'El archivo no contiene un formato SRT válido.');
       return;
     }
-    renderEditor();
-    document.getElementById('translate-btn').disabled = false;
-    document.getElementById('clear-btn').style.display = 'flex';
-    const dz = document.getElementById('drop-zone');
-    dz.querySelector('.dz-icon').textContent = '✅';
-    dz.querySelector('.dz-title').textContent = file.name;
-    dz.querySelector('.dz-sub').textContent = `${subtitles.length} subtítulos detectados`;
-    hideStatus();
+    
+    // Switch Panel
+    document.getElementById('right-panel-upload').classList.add('hidden');
+    document.getElementById('right-panel-editor').classList.remove('hidden');
+    
+    // Set Header Info
+    document.getElementById('work-file-name').textContent = file.name;
+    document.getElementById('work-file-meta').textContent = `${subtitles.length} subtítulos · SRT`;
+    
+    renderStudioEditor();
+    showToast('success', `Cargado: ${subtitles.length} subtítulos detectados.`);
   };
+  
   reader.readAsArrayBuffer(file);
 }
 
-/* ── Renderizar editor ── */
-function renderEditor() {
-  const editor = document.getElementById('editor');
-  const wrap = document.getElementById('rows-wrap');
-  editor.classList.add('visible');
-  document.getElementById('editor-count').textContent = `${subtitles.length} subtítulos`;
-  wrap.innerHTML = '';
+/* ── RENDERING THE STUDIO EDITOR ── */
+function renderStudioEditor() {
+  const bodyRows = document.getElementById('studio-body-rows');
+  bodyRows.innerHTML = '';
+  
   subtitles.forEach((sub, i) => {
     const row = document.createElement('div');
-    row.className = 'sub-row';
-    row.id = `row-${i}`;
+    row.className = `studio-row ${sub.status}`;
+    row.id = `sub-row-${i}`;
+    
     const timeDisplay = sub.time.replace('-->', '→');
+    const startAndEnd = timeDisplay.split(' → ');
+    
     row.innerHTML = `
-      <div class="cell c-num">${sub.idx}</div>
-      <div class="cell c-time">${escHtml(timeDisplay)}</div>
-      <div class="cell c-orig">${escHtml(sub.original)}</div>
-      <div class="cell c-trans"><textarea id="ta-${i}" rows="1" aria-label="Traducción del subtítulo ${sub.idx}">${escHtml(sub.translation)}</textarea></div>
+      <div class="studio-cell cell-index">${sub.idx}</div>
+      <div class="studio-cell cell-time">
+        <span class="time-badge">${startAndEnd[0] || ''}</span>
+        <span class="time-badge" style="border-style:dashed;">${startAndEnd[1] || ''}</span>
+      </div>
+      <div class="studio-cell cell-original" id="orig-${i}">${escapeHTML(sub.original)}</div>
+      <div class="studio-cell cell-translation">
+        <textarea class="translation-textarea ${sub.status === 'translating' ? 'translating-placeholder' : ''}" 
+                  id="trans-textarea-${i}" 
+                  placeholder="${sub.status === 'translating' ? 'Traduciendo...' : 'Escribe o edita la traducción...'}" 
+                  aria-label="Traducción del subtítulo ${sub.idx}">${escapeHTML(sub.translation)}</textarea>
+      </div>
+      <div class="studio-cell cell-actions">
+        <button class="row-action-btn btn-retry-row" data-index="${i}" title="Volver a traducir esta línea">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+        </button>
+        <button class="row-action-btn btn-copy-row" data-index="${i}" title="Copiar original">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+      </div>
     `;
-    const ta = row.querySelector(`#ta-${i}`);
+    
+    // Auto height on loads
+    const ta = row.querySelector(`#trans-textarea-${i}`);
     ta.addEventListener('input', () => {
       subtitles[i].translation = ta.value;
-      autoH(ta);
+      if (ta.value.trim() !== '') {
+        updateRowStatus(i, 'success');
+      }
+      adjustTextAreaHeight(ta);
     });
-    wrap.appendChild(row);
+    
+    ta.addEventListener('focus', () => {
+      row.classList.add('active');
+    });
+    ta.addEventListener('blur', () => {
+      row.classList.remove('active');
+    });
+
+    // Row Actions listeners
+    row.querySelector('.cell-time').addEventListener('click', () => {
+      const video = document.getElementById('studio-video-element');
+      if (video && video.src) {
+        video.currentTime = sub.startTime;
+        video.play();
+      }
+    });
+
+    row.querySelector('.btn-retry-row').addEventListener('click', () => {
+      translateSingleSubtitleRow(i);
+    });
+    row.querySelector('.btn-copy-row').addEventListener('click', () => {
+      navigator.clipboard.writeText(subtitles[i].original);
+      showToast('success', `Copiado subtítulo #${subtitles[i].idx} al portapapeles.`);
+    });
+    
+    bodyRows.appendChild(row);
+    adjustTextAreaHeight(ta);
   });
 }
 
-function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-function autoH(ta) {
-  ta.style.height = 'auto';
-  ta.style.height = ta.scrollHeight + 'px';
+function updateRowStatus(index, status) {
+  if (!subtitles[index]) return;
+  subtitles[index].status = status;
+  
+  const row = document.getElementById(`sub-row-${index}`);
+  if (row) {
+    row.className = `studio-row ${status}`;
+  }
+  
+  const ta = document.getElementById(`trans-textarea-${index}`);
+  if (ta) {
+    ta.className = `translation-textarea ${status === 'translating' ? 'translating-placeholder' : ''}`;
+    if (status === 'translating') {
+      ta.placeholder = 'Traduciendo...';
+    } else {
+      ta.placeholder = 'Escribe o edita la traducción...';
+    }
+  }
 }
 
-/* ── Traducción con MyMemory ── */
-document.getElementById('translate-btn').addEventListener('click', runTranslation);
+function adjustTextAreaHeight(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
 
-async function translateOne(text, from, to, email) {
-  // Limpiar etiquetas HTML para la traducción pero guardarlas
+function escapeHTML(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* ── SEARCH AND BULK EDITS ── */
+function applyStudioFilters() {
+  const query = document.getElementById('studio-search-input').value.toLowerCase().trim();
+  
+  subtitles.forEach((sub, i) => {
+    const row = document.getElementById(`sub-row-${i}`);
+    if (!row) return;
+    
+    const matchesSearch = query === '' || 
+                          sub.original.toLowerCase().includes(query) || 
+                          sub.translation.toLowerCase().includes(query);
+                          
+    const matchesStateFilter = !filterIncomplete || 
+                               (sub.status === 'error' || sub.status === 'pending' || sub.translation.trim() === '');
+    
+    if (matchesSearch && matchesStateFilter) {
+      row.classList.remove('hidden');
+      highlightMatchedText(i, query);
+    } else {
+      row.classList.add('hidden');
+    }
+  });
+}
+
+function highlightMatchedText(index, query) {
+  const origCell = document.getElementById(`orig-${index}`);
+  if (!origCell) return;
+  
+  const originalText = subtitles[index].original;
+  if (query === '') {
+    origCell.innerHTML = escapeHTML(originalText);
+    return;
+  }
+  
+  const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
+  const highlighted = escapeHTML(originalText).replace(regex, '<mark>$1</mark>');
+  origCell.innerHTML = highlighted;
+}
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function performFindAndReplace() {
+  const findText = document.getElementById('find-input').value;
+  const replaceText = document.getElementById('replace-input').value;
+  
+  if (!findText) {
+    showToast('warning', 'Introduce un texto a buscar.');
+    return;
+  }
+  
+  let count = 0;
+  subtitles.forEach((sub, i) => {
+    if (sub.translation.includes(findText)) {
+      sub.translation = sub.translation.replaceAll(findText, replaceText);
+      const ta = document.getElementById(`trans-textarea-${i}`);
+      if (ta) {
+        ta.value = sub.translation;
+        adjustTextAreaHeight(ta);
+      }
+      updateRowStatus(i, 'success');
+      count++;
+    }
+  });
+  
+  showToast('success', `Reemplazados ${count} elementos.`);
+  document.getElementById('find-replace-panel').classList.add('hidden');
+}
+
+/* ── TRANSLATION PIPELINES ── */
+
+// Verify Gemini API Key
+async function verifyGeminiKey() {
+  const key = document.getElementById('gemini-key-input').value.trim();
+  if (!key) {
+    showToast('error', 'Por favor introduce una API Key.');
+    return;
+  }
+  
+  const verifyBtn = document.getElementById('verify-gemini-btn');
+  verifyBtn.disabled = true;
+  verifyBtn.textContent = 'Probando...';
+  
+  try {
+    const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+    const res = await fetch(testUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: 'Responde con la palabra "OK".' }] }]
+      })
+    });
+    
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    
+    if (text.includes('OK')) {
+      showToast('success', 'API Key válida.');
+      localStorage.setItem('gemini_api_key', key);
+    } else {
+      throw new Error();
+    }
+  } catch {
+    showToast('error', 'API Key inválida. Comprueba la clave.');
+  } finally {
+    verifyBtn.disabled = false;
+    verifyBtn.textContent = 'Verificar';
+  }
+}
+
+// Global translator trigger
+async function executeTranslationWork() {
+  if (isRunning) return;
+  isRunning = true;
+  
+  const fromCode = fromLangDropdown.value;
+  const toCode = toLangDropdown.value;
+  
+  if (fromCode === toCode) {
+    showToast('warning', 'Los idiomas de origen y destino coinciden.');
+    isRunning = false;
+    return;
+  }
+  
+  // Set UI States
+  document.getElementById('btn-run-translation').disabled = true;
+  document.getElementById('btn-download').disabled = true;
+  
+  const progressBox = document.getElementById('editor-progress-bar');
+  progressBox.classList.remove('hidden');
+  
+  showToast('working', 'Traduciendo subtítulos...');
+  
+  try {
+    if (activeEngine === 'gemini') {
+      await translateWithGeminiBatch(fromCode, toCode);
+    } else {
+      await translateWithMyMemoryIndividual(fromCode, toCode);
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('error', `Traducción completada con fallos.`);
+  } finally {
+    isRunning = false;
+    document.getElementById('btn-run-translation').disabled = false;
+    document.getElementById('btn-download').disabled = false;
+    
+    // Check if there are errors
+    const errors = subtitles.filter(s => s.status === 'error').length;
+    if (errors === 0) {
+      showToast('success', 'Traducción completada con éxito.');
+      progressBox.classList.add('hidden');
+    } else {
+      showToast('warning', `Traducción terminada. ${errors} líneas fallaron.`);
+    }
+  }
+}
+
+// SINGLE ROW RETRY TRANSLATION
+async function translateSingleSubtitleRow(index) {
+  const sub = subtitles[index];
+  if (!sub) return;
+  
+  const fromCode = fromLangDropdown.value;
+  const toCode = toLangDropdown.value;
+  
+  updateRowStatus(index, 'translating');
+  showToast('working', `Traduciendo línea #${sub.idx}...`);
+  
+  try {
+    let result = '';
+    if (activeEngine === 'gemini') {
+      const apiKey = localStorage.getItem('gemini_api_key');
+      const context = document.getElementById('context-input').value.trim();
+      const results = await fetchGeminiTranslation([{ idx: sub.idx, text: sub.original }], fromCode, toCode, apiKey, context);
+      result = results[0]?.text || '';
+    } else {
+      const email = localStorage.getItem('mymemory_email') || '';
+      result = await fetchMyMemoryTranslation(sub.original, fromCode, toCode, email);
+    }
+    
+    if (result.trim() === '') throw new Error('Resultado vacío');
+    
+    sub.translation = result;
+    const ta = document.getElementById(`trans-textarea-${index}`);
+    if (ta) {
+      ta.value = result;
+      adjustTextAreaHeight(ta);
+    }
+    updateRowStatus(index, 'success');
+    showToast('success', `Línea #${sub.idx} traducida.`);
+  } catch (err) {
+    console.error(err);
+    updateRowStatus(index, 'error');
+    const ta = document.getElementById(`trans-textarea-${index}`);
+    if (ta) ta.value = '';
+    showToast('error', `Error al traducir línea #${sub.idx}.`);
+  }
+}
+
+/* ── MYMEMORY TRANSLATION IMPLEMENTATION ── */
+async function fetchMyMemoryTranslation(text, fromCode, toCode, email) {
   const stripped = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   const query = encodeURIComponent(stripped);
-  const pair = `${from}|${to}`;
+  const pair = `${fromCode}|${toCode}`;
+  
   let url = `https://api.mymemory.translated.net/get?q=${query}&langpair=${pair}`;
   if (email) url += `&de=${encodeURIComponent(email)}`;
-
+  
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  
   const data = await res.json();
-  if (data.responseStatus !== 200) throw new Error(data.responseDetails || 'Error de API');
+  if (data.responseStatus !== 200) {
+    throw new Error(data.responseDetails || 'Error de MyMemory');
+  }
   return data.responseData.translatedText;
 }
 
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-async function runTranslation() {
-  if (isRunning) return;
-  isRunning = true;
-
-  const from = document.getElementById('lang-from').value;
-  const to = document.getElementById('lang-to').value;
-  const email = document.getElementById('mymemory-email').value.trim();
-
-  if (from === to) {
-    showStatus('warning', '⚠️ El idioma de origen y destino son iguales.');
-    isRunning = false; return;
-  }
-
-  document.getElementById('translate-btn').disabled = true;
-  document.getElementById('download-btn').disabled = true;
-
-  let done = 0;
-  let errors = 0;
-  showStatus('working', `Traduciendo… 0 de ${subtitles.length}`, 0);
-
-  for (let i = 0; i < subtitles.length; i++) {
+async function translateWithMyMemoryIndividual(fromCode, toCode) {
+  const email = localStorage.getItem('mymemory_email') || '';
+  const total = subtitles.length;
+  
+  for (let i = 0; i < total; i++) {
     const sub = subtitles[i];
-    const row = document.getElementById(`row-${i}`);
-    const ta = document.getElementById(`ta-${i}`);
-
-    if (row) row.className = 'sub-row is-translating';
-    if (ta) { ta.className = 'pending'; ta.value = 'Traduciendo…'; }
-
+    
+    // Skip if already translated successfully
+    if (sub.translation.trim() !== '' && sub.status === 'success') {
+      continue;
+    }
+    
+    updateRowStatus(i, 'translating');
+    updateProgressUI(i + 1, total, `Línea ${i + 1} de ${total}`);
+    
     try {
-      const result = await translateOne(sub.original, from, to, email);
+      const result = await fetchMyMemoryTranslation(sub.original, fromCode, toCode, email);
       sub.translation = result;
-      sub.error = false;
-      if (ta) { ta.value = result; ta.className = ''; autoH(ta); }
-      if (row) row.className = 'sub-row is-done';
-      done++;
+      
+      const ta = document.getElementById(`trans-textarea-${i}`);
+      if (ta) {
+        ta.value = result;
+        adjustTextAreaHeight(ta);
+      }
+      updateRowStatus(i, 'success');
     } catch (err) {
-      sub.error = true;
-      if (ta) { ta.value = ''; ta.className = ''; ta.placeholder = 'Error — edita manualmente'; }
-      if (row) row.className = 'sub-row is-error';
-      errors++;
-      // si hay error de límite, pausar más
-      if (err.message.includes('403') || err.message.includes('limit')) {
-        showStatus('warning', `⚠️ Posible límite de API alcanzado en subtítulo ${i+1}. Esperando 10s…`, Math.round((done/subtitles.length)*100));
-        await delay(10000);
+      console.error(err);
+      updateRowStatus(i, 'error');
+      
+      // Delay if it's rate limit
+      if (err.message.includes('403') || err.message.toLowerCase().includes('limit')) {
+        updateProgressUI(i + 1, total, 'Límite alcanzado. Esperando 8s...');
+        await sleep(8000);
       }
     }
-
-    const pct = Math.round(((i+1) / subtitles.length) * 100);
-    showStatus('working', `Traduciendo… ${i+1} de ${subtitles.length} (${pct}%)`, pct);
-
-    // Pausa entre peticiones para no saturar la API gratuita
-    if (i < subtitles.length - 1) await delay(300);
-  }
-
-  isRunning = false;
-  document.getElementById('translate-btn').disabled = false;
-  document.getElementById('download-btn').disabled = false;
-
-  const badge = document.getElementById('editor-badge');
-  if (errors === 0) {
-    showStatus('done', `✅ Traducción completada — ${done} subtítulos. Revisa y descarga.`);
-    badge.textContent = 'Traducido'; badge.className = 'badge ok';
-  } else {
-    showStatus('warning', `⚠️ ${done} subtítulos traducidos, ${errors} fallaron (puedes editarlos manualmente).`);
-    badge.textContent = `${errors} errores`; badge.className = 'badge pending';
+    
+    // Throttling to prevent API ban
+    await sleep(250);
   }
 }
 
-/* ── Descargar ── */
-document.getElementById('download-btn').addEventListener('click', () => {
-  const lines = subtitles.map(s =>
-    `${s.idx}\n${s.time}\n${s.translation || s.original}`
+/* ── GEMINI AI BATCH TRANSLATION IMPLEMENTATION ── */
+async function translateWithGeminiBatch(fromCode, toCode) {
+  const apiKey = localStorage.getItem('gemini_api_key');
+  if (!apiKey) {
+    showToast('error', 'Clave API de Gemini faltante. Configúrala.');
+    throw new Error('API Key faltante');
+  }
+  
+  const context = document.getElementById('context-input').value.trim();
+  const batchSize = 25; // Optimum size for speed & context window
+  const total = subtitles.length;
+  
+  const itemsToTranslate = [];
+  
+  subtitles.forEach((sub, i) => {
+    if (sub.translation.trim() === '' || sub.status !== 'success') {
+      itemsToTranslate.push({ originalIndex: i, idx: sub.idx, text: sub.original });
+    }
+  });
+  
+  const totalToTranslate = itemsToTranslate.length;
+  let processesCount = 0;
+  
+  for (let step = 0; step < totalToTranslate; step += batchSize) {
+    const chunk = itemsToTranslate.slice(step, step + batchSize);
+    
+    // Mark as translating
+    chunk.forEach(item => updateRowStatus(item.originalIndex, 'translating'));
+    processesCount += chunk.length;
+    updateProgressUI(processesCount, totalToTranslate, `Lote: ${processesCount} de ${totalToTranslate}`);
+    
+    try {
+      const translatedBatch = await fetchGeminiTranslation(chunk, fromCode, toCode, apiKey, context);
+      
+      translatedBatch.forEach(transItem => {
+        // Find matching item in chunk
+        const match = chunk.find(c => String(c.idx) === String(transItem.idx));
+        if (match) {
+          const sub = subtitles[match.originalIndex];
+          sub.translation = transItem.text;
+          
+          const ta = document.getElementById(`trans-textarea-${match.originalIndex}`);
+          if (ta) {
+            ta.value = transItem.text;
+            adjustTextAreaHeight(ta);
+          }
+          updateRowStatus(match.originalIndex, 'success');
+        }
+      });
+      
+      // Mark outstanding as error if missing in return JSON
+      chunk.forEach(item => {
+        if (subtitles[item.originalIndex].status === 'translating') {
+          updateRowStatus(item.originalIndex, 'error');
+        }
+      });
+      
+    } catch (err) {
+      console.error(err);
+      chunk.forEach(item => updateRowStatus(item.originalIndex, 'error'));
+    }
+    
+    // Tiny delay between batches to respect rate-limits of free tier keys
+    await sleep(400);
+  }
+}
+
+async function fetchGeminiTranslation(batch, fromCode, toCode, apiKey, context) {
+  const fromName = getLanguageLabelName(fromCode);
+  const toName = getLanguageLabelName(toCode);
+  
+  const prompt = `Eres un traductor profesional de subtítulos. Traduce los siguientes subtítulos de la obra de "${fromName}" a "${toName}".
+  
+Contexto general del contenido (úsalo para dar coherencia de género, tono e interpretaciones correctas):
+"${context || 'No especificado'}"
+
+Instrucciones críticas:
+1. Traduce de manera extremadamente natural, adaptando modismos o jerga según corresponda.
+2. Mantén exactamente los mismos valores para la clave "idx" en el resultado.
+3. Conserva los saltos de línea (\\n) que encuentres en el texto original.
+4. Devuelve únicamente el JSON con el array traducido bajo la clave "translations" respetando esta estructura:
+{
+  "translations": [
+    { "idx": "id_aqui", "text": "texto_traducido_aqui" }
+  ]
+}
+NO escribas explicaciones ni uses etiquetas de bloque de código de markdown. Devuelve solo el JSON crudo.
+
+Subtítulos a traducir:
+${JSON.stringify(batch.map(b => ({ idx: b.idx, text: b.text })), null, 2)}`;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: 'application/json'
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const message = errorData.error?.message || `HTTP ${response.status}`;
+    throw new Error(message);
+  }
+
+  const resJson = await response.json();
+  const rawText = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!rawText) throw new Error('Respuesta de la IA vacía');
+  
+  const parsed = JSON.parse(rawText.trim());
+  if (!parsed.translations || !Array.isArray(parsed.translations)) {
+    throw new Error('Estructura de respuesta inválida');
+  }
+  
+  return parsed.translations;
+}
+
+function getLanguageLabelName(code) {
+  const item = LANGS.find(l => l.code === code);
+  return item ? item.label.split(' (')[0] : code;
+}
+
+/* ── EXPORT / DOWNLOAD ── */
+function downloadSRTText() {
+  const textContent = subtitles.map(sub => 
+    `${sub.idx}\n${sub.time}\n${sub.translation || sub.original}`
   ).join('\n\n');
-  const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = fileName;
-  a.click();
-  URL.revokeObjectURL(a.href);
-});
+  
+  const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+  const downloadLink = document.createElement('a');
+  downloadLink.href = URL.createObjectURL(blob);
+  downloadLink.download = fileName;
+  downloadLink.click();
+  
+  URL.revokeObjectURL(downloadLink.href);
+  showToast('success', 'Archivo SRT descargado con éxito.');
+}
 
-/* ── Limpiar ── */
-document.getElementById('clear-btn').addEventListener('click', () => {
+/* ── WORKSPACE RESET ── */
+function resetWorkspace() {
   subtitles = [];
-  document.getElementById('editor').classList.remove('visible');
-  document.getElementById('rows-wrap').innerHTML = '';
-  document.getElementById('translate-btn').disabled = true;
-  document.getElementById('download-btn').disabled = true;
-  document.getElementById('clear-btn').style.display = 'none';
+  document.getElementById('right-panel-editor').classList.add('hidden');
+  document.getElementById('right-panel-upload').classList.remove('hidden');
   document.getElementById('file-input').value = '';
+  document.getElementById('studio-search-input').value = '';
+  document.getElementById('editor-progress-bar').classList.add('hidden');
+  
   const dz = document.getElementById('drop-zone');
-  dz.querySelector('.dz-icon').textContent = '📄';
   dz.querySelector('.dz-title').textContent = 'Arrastra tu archivo .srt aquí';
-  dz.querySelector('.dz-sub').textContent = 'o haz clic para seleccionarlo';
-  hideStatus();
-});
+  dz.querySelector('.dz-sub').textContent = 'o haz clic para examinar en tu dispositivo';
+}
 
-/* ── Status helpers ── */
-function showStatus(type, msg, pct) {
-  const bar = document.getElementById('status-bar');
-  bar.className = `status visible ${type}`;
+/* ── UX UTILS & WIDGETS ── */
+let toastTimeout;
+function showToast(type, message) {
+  const toast = document.getElementById('status-toast');
+  const icon = document.getElementById('toast-icon');
+  const msgText = document.getElementById('toast-message');
+  
+  clearTimeout(toastTimeout);
+  
+  toast.className = `status-toast visible ${type}`;
+  msgText.textContent = message;
+  
+  // Icon picker
   if (type === 'working') {
-    bar.innerHTML = `<div class="spinner"></div><span style="flex:0 0 auto">${msg}</span><div class="progress-track"><div class="progress-fill" style="width:${pct||0}%"></div></div>`;
+    icon.innerHTML = '<div class="spinner"></div>';
+  } else if (type === 'success') {
+    icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+  } else if (type === 'error') {
+    icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
   } else {
-    bar.innerHTML = `<span>${msg}</span>`;
+    // warning
+    icon.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+  }
+  
+  if (type !== 'working') {
+    toastTimeout = setTimeout(() => {
+      toast.classList.remove('visible');
+    }, 4000);
   }
 }
-function hideStatus() {
-  document.getElementById('status-bar').className = 'status';
+
+function updateProgressUI(current, total, label) {
+  const percentage = Math.round((current / total) * 100);
+  
+  // Update radial progress
+  const radial = document.getElementById('radial-progress-element');
+  if (radial) {
+    radial.style.background = `conic-gradient(var(--accent-color) ${percentage}%, var(--bg-surface-accent) ${percentage}%)`;
+  }
+  
+  const val = document.getElementById('radial-progress-value');
+  if (val) {
+    val.textContent = `${percentage}%`;
+  }
+  
+  const sub = document.getElementById('progress-status-sub');
+  if (sub) {
+    sub.textContent = label;
+  }
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/* ── VIDEO SYNC & PLAYER FUNCTIONS ── */
+function initVideoUpload() {
+  const vdz = document.getElementById('video-drop-zone');
+  const vinput = document.getElementById('video-file-input');
+  
+  if (!vdz || !vinput) return;
+  
+  vdz.addEventListener('click', () => vinput.click());
+  
+  vdz.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    vdz.style.borderColor = 'var(--accent-color)';
+    vdz.style.background = 'var(--accent-light)';
+  });
+  vdz.addEventListener('dragleave', () => {
+    vdz.style.borderColor = '';
+    vdz.style.background = '';
+  });
+  vdz.addEventListener('drop', (e) => {
+    e.preventDefault();
+    vdz.style.borderColor = '';
+    vdz.style.background = '';
+    if (e.dataTransfer.files[0]) loadVideoFile(e.dataTransfer.files[0]);
+  });
+  
+  vinput.addEventListener('change', (e) => {
+    if (e.target.files[0]) loadVideoFile(e.target.files[0]);
+  });
+  
+  const btnRemove = document.getElementById('btn-remove-video');
+  if (btnRemove) {
+    btnRemove.addEventListener('click', removeLoadedVideo);
+  }
+}
+
+function loadVideoFile(file) {
+  const video = document.getElementById('studio-video-element');
+  const wrapper = document.getElementById('video-wrapper');
+  const vdz = document.getElementById('video-drop-zone');
+  const meta = document.getElementById('video-meta-control');
+  const nameSpan = document.getElementById('video-loaded-name');
+  
+  if (!video || !wrapper || !vdz) return;
+  
+  const url = URL.createObjectURL(file);
+  video.src = url;
+  
+  wrapper.classList.remove('hidden');
+  vdz.classList.add('hidden');
+  if (meta) meta.classList.remove('hidden');
+  if (nameSpan) nameSpan.textContent = file.name;
+  
+  video.load();
+  showToast('success', `Vídeo sincronizado: ${file.name}`);
+}
+
+function removeLoadedVideo() {
+  const video = document.getElementById('studio-video-element');
+  const wrapper = document.getElementById('video-wrapper');
+  const vdz = document.getElementById('video-drop-zone');
+  const meta = document.getElementById('video-meta-control');
+  const overlay = document.getElementById('video-subtitle-overlay');
+  
+  if (!video) return;
+  
+  video.pause();
+  video.removeAttribute('src');
+  video.load();
+  
+  if (wrapper) wrapper.classList.add('hidden');
+  if (vdz) vdz.classList.remove('hidden');
+  if (meta) meta.classList.add('hidden');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    overlay.textContent = '';
+  }
+  
+  if (activeRowIndex !== -1) {
+    const prevRow = document.getElementById(`sub-row-${activeRowIndex}`);
+    if (prevRow) prevRow.classList.remove('active-playing');
+    activeRowIndex = -1;
+  }
+}
+
+let activeRowIndex = -1;
+
+function initVideoSync() {
+  const video = document.getElementById('studio-video-element');
+  const overlay = document.getElementById('video-subtitle-overlay');
+  
+  if (!video || !overlay) return;
+  
+  video.addEventListener('timeupdate', () => {
+    const curTime = video.currentTime;
+    
+    // Find active subtitle
+    let foundIdx = -1;
+    for (let i = 0; i < subtitles.length; i++) {
+      if (curTime >= subtitles[i].startTime && curTime <= subtitles[i].endTime) {
+        foundIdx = i;
+        break;
+      }
+    }
+    
+    if (foundIdx !== activeRowIndex) {
+      // Remove highlight from previous row
+      if (activeRowIndex !== -1) {
+        const prevRow = document.getElementById(`sub-row-${activeRowIndex}`);
+        if (prevRow) prevRow.classList.remove('active-playing');
+      }
+      
+      activeRowIndex = foundIdx;
+      
+      if (activeRowIndex !== -1) {
+        const activeSub = subtitles[activeRowIndex];
+        const text = activeSub.translation.trim() !== '' ? activeSub.translation : activeSub.original;
+        
+        // Show subtitle overlay
+        overlay.textContent = text;
+        overlay.classList.remove('hidden');
+        
+        // Highlight active row in editor
+        const activeRow = document.getElementById(`sub-row-${activeRowIndex}`);
+        if (activeRow) {
+          activeRow.classList.add('active-playing');
+          // Scroll active row into view
+          activeRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      } else {
+        // Hide overlay
+        overlay.textContent = '';
+        overlay.classList.add('hidden');
+      }
+    }
+  });
 }
 </script>
 </body>
