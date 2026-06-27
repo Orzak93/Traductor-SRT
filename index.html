@@ -2112,12 +2112,30 @@ function updateEngineToggles() {
 function saveModalSettings() {
   const email = document.getElementById('mymemory-email-input').value.trim();
   const apiKey = document.getElementById('gemini-key-modal').value.trim();
-  
-  localStorage.setItem('mymemory_email', email);
-  localStorage.setItem('gemini_api_key', apiKey);
+
+  // Email: remove from storage if empty, update if provided
+  const prevEmail = localStorage.getItem('mymemory_email') || '';
+  if (email) {
+    localStorage.setItem('mymemory_email', email);
+  } else {
+    localStorage.removeItem('mymemory_email');
+  }
+
+  // API key: remove from storage if empty, update if provided
+  if (apiKey) {
+    localStorage.setItem('gemini_api_key', apiKey);
+  } else {
+    localStorage.removeItem('gemini_api_key');
+  }
   document.getElementById('gemini-key-input').value = apiKey;
-  
-  showToast('success', 'Configuración guardada correctamente.');
+
+  // Toast feedback
+  if (!email && prevEmail) {
+    showToast('success', 'Email de MyMemory eliminado. Usando límite anónimo (~5.000 palabras/día).');
+  } else {
+    showToast('success', 'Configuración guardada correctamente.');
+  }
+
   document.getElementById('settings-modal').classList.remove('open');
 }
 
@@ -2498,6 +2516,25 @@ function performFindAndReplace() {
   document.getElementById('find-replace-panel').classList.add('hidden');
 }
 
+/* ── TAG PROTECTION HELPERS ── */
+// Extracts SRT formatting tags (e.g. <c.white>, <i>, <b>, <font color="...">, etc.)
+// replacing them with numbered placeholders so translators never see them.
+function stripTagsForTranslation(text) {
+  const tags = [];
+  const stripped = text.replace(/<[^>]+>/g, (match) => {
+    const placeholder = `\x00§${tags.length}§\x00`;
+    tags.push(match);
+    return placeholder;
+  });
+  return { stripped, tags };
+}
+
+// Restores the original tags back into the translated text using the placeholders.
+function restoreTagsAfterTranslation(translatedText, tags) {
+  if (tags.length === 0) return translatedText;
+  return translatedText.replace(/\x00§(\d+)§\x00/g, (_, i) => tags[Number(i)] || '');
+}
+
 /* ── TRANSLATION PIPELINES ── */
 
 // Verify Gemini API Key
@@ -2563,6 +2600,11 @@ async function executeTranslationWork() {
   
   showToast('working', 'Traduciendo subtítulos...');
   
+  // Start active polling so the video can begin playing as soon
+  // as the first BUFFER_LINES subtitles are translated, without
+  // needing the user to press play or the video to be already running.
+  startBufferPolling();
+
   try {
     if (activeEngine === 'gemini') {
       await translateWithGeminiBatch(fromCode, toCode);
@@ -2574,7 +2616,8 @@ async function executeTranslationWork() {
     showToast('error', `Traducción completada con fallos.`);
   } finally {
     isRunning = false;
-    bufferPaused = false; // ensure we never leave the video frozen after translation ends
+    bufferPaused = false;
+    stopBufferPolling();
 
     // Clear buffer overlay and resume video if it was paused waiting for buffer
     const bufferOverlay = document.getElementById('buffer-overlay');
@@ -2630,8 +2673,9 @@ async function translateSingleSubtitleRow(index) {
     if (activeEngine === 'gemini') {
       const apiKey = localStorage.getItem('gemini_api_key');
       const context = document.getElementById('context-input').value.trim();
-      const results = await fetchGeminiTranslation([{ idx: sub.idx, text: sub.original }], fromCode, toCode, apiKey, context);
-      result = results[0]?.text || '';
+      const { stripped, tags } = stripTagsForTranslation(sub.original);
+      const results = await fetchGeminiTranslation([{ idx: sub.idx, text: stripped }], fromCode, toCode, apiKey, context);
+      result = restoreTagsAfterTranslation(results[0]?.text || '', tags);
     } else {
       const email = localStorage.getItem('mymemory_email') || '';
       result = await fetchMyMemoryTranslation(sub.original, fromCode, toCode, email);
@@ -2658,8 +2702,11 @@ async function translateSingleSubtitleRow(index) {
 
 /* ── MYMEMORY TRANSLATION IMPLEMENTATION ── */
 async function fetchMyMemoryTranslation(text, fromCode, toCode, email) {
-  const stripped = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  const query = encodeURIComponent(stripped);
+  // Strip SRT tags before sending, keep them to restore later
+  const { stripped, tags } = stripTagsForTranslation(text);
+  const cleanText = stripped.replace(/\s+/g, ' ').trim();
+
+  const query = encodeURIComponent(cleanText);
   const pair = `${fromCode}|${toCode}`;
   
   let url = `https://api.mymemory.translated.net/get?q=${query}&langpair=${pair}`;
@@ -2672,7 +2719,9 @@ async function fetchMyMemoryTranslation(text, fromCode, toCode, email) {
   if (data.responseStatus !== 200) {
     throw new Error(data.responseDetails || 'Error de MyMemory');
   }
-  return data.responseData.translatedText;
+
+  // Restore the original tags into the translated text
+  return restoreTagsAfterTranslation(data.responseData.translatedText, tags);
 }
 
 async function translateWithMyMemoryIndividual(fromCode, toCode) {
@@ -2739,14 +2788,14 @@ async function translateWithGeminiBatch(fromCode, toCode) {
   }
   
   const context = document.getElementById('context-input').value.trim();
-  const batchSize = 25; // Optimum size for speed & context window
-  const total = subtitles.length;
+  const batchSize = 25;
   
   const itemsToTranslate = [];
   
   subtitles.forEach((sub, i) => {
     if (sub.translation.trim() === '' || sub.status !== 'success') {
-      itemsToTranslate.push({ originalIndex: i, idx: sub.idx, text: sub.original });
+      const { stripped, tags } = stripTagsForTranslation(sub.original);
+      itemsToTranslate.push({ originalIndex: i, idx: sub.idx, text: stripped, tags });
     }
   });
   
@@ -2756,44 +2805,63 @@ async function translateWithGeminiBatch(fromCode, toCode) {
   for (let step = 0; step < totalToTranslate; step += batchSize) {
     const chunk = itemsToTranslate.slice(step, step + batchSize);
     
-    // Mark as translating
     chunk.forEach(item => updateRowStatus(item.originalIndex, 'translating'));
     processesCount += chunk.length;
     updateProgressUI(processesCount, totalToTranslate, `Lote: ${processesCount} de ${totalToTranslate}`);
     
-    try {
-      const translatedBatch = await fetchGeminiTranslation(chunk, fromCode, toCode, apiKey, context);
-      
-      translatedBatch.forEach(transItem => {
-        // Find matching item in chunk
-        const match = chunk.find(c => String(c.idx) === String(transItem.idx));
-        if (match) {
-          const sub = subtitles[match.originalIndex];
-          sub.translation = transItem.text;
-          
-          const ta = document.getElementById(`trans-textarea-${match.originalIndex}`);
-          if (ta) {
-            ta.value = transItem.text;
-            adjustTextAreaHeight(ta);
+    // Exponential backoff retry for 429 / server errors
+    let retries = 0;
+    const maxRetries = 4;
+    let success = false;
+
+    while (!success && retries <= maxRetries) {
+      try {
+        const translatedBatch = await fetchGeminiTranslation(chunk, fromCode, toCode, apiKey, context);
+        
+        translatedBatch.forEach(transItem => {
+          const match = chunk.find(c => String(c.idx) === String(transItem.idx));
+          if (match) {
+            const sub = subtitles[match.originalIndex];
+            sub.translation = restoreTagsAfterTranslation(transItem.text, match.tags);
+            const ta = document.getElementById(`trans-textarea-${match.originalIndex}`);
+            if (ta) {
+              ta.value = sub.translation;
+              adjustTextAreaHeight(ta);
+            }
+            updateRowStatus(match.originalIndex, 'success');
           }
-          updateRowStatus(match.originalIndex, 'success');
+        });
+        
+        // Mark anything still translating as error (missing from response)
+        chunk.forEach(item => {
+          if (subtitles[item.originalIndex].status === 'translating') {
+            updateRowStatus(item.originalIndex, 'error');
+          }
+        });
+
+        success = true;
+
+      } catch (err) {
+        const is429 = err.message.includes('429') || err.message.toLowerCase().includes('quota') || err.message.toLowerCase().includes('rate');
+        if (is429 && retries < maxRetries) {
+          retries++;
+          // Exponential backoff: 15s, 30s, 60s, 120s
+          const waitSec = 15 * Math.pow(2, retries - 1);
+          updateProgressUI(processesCount, totalToTranslate, `Límite de API. Reintento ${retries}/${maxRetries} en ${waitSec}s...`);
+          showToast('warning', `Rate limit de Gemini. Esperando ${waitSec}s...`);
+          await sleep(waitSec * 1000);
+        } else {
+          console.error(err);
+          chunk.forEach(item => updateRowStatus(item.originalIndex, 'error'));
+          success = true; // exit retry loop, move to next chunk
         }
-      });
-      
-      // Mark outstanding as error if missing in return JSON
-      chunk.forEach(item => {
-        if (subtitles[item.originalIndex].status === 'translating') {
-          updateRowStatus(item.originalIndex, 'error');
-        }
-      });
-      
-    } catch (err) {
-      console.error(err);
-      chunk.forEach(item => updateRowStatus(item.originalIndex, 'error'));
+      }
     }
     
-    // Tiny delay between batches to respect rate-limits of free tier keys
-    await sleep(400);
+    // Respect Gemini free tier: ~10 RPM → 1 request every 6s minimum
+    if (step + batchSize < totalToTranslate) {
+      await sleep(6000);
+    }
   }
 }
 
@@ -2878,6 +2946,7 @@ function resetWorkspace() {
   pendingSRTFile = null;
   pendingVideoFile = null;
   bufferPaused = false;
+  stopBufferPolling();
 
   document.getElementById('right-panel-editor').classList.add('hidden');
   document.getElementById('right-panel-upload').classList.remove('hidden');
@@ -3133,57 +3202,47 @@ let activeRowIndex = -1;
 
 /* ── BUFFER SYSTEM ── */
 // How many subtitle lines ahead of current playback position must be translated
-// before the video is allowed to play. Simple and robust:
-// Find the subtitle whose startTime is closest after currentTime.
-// If it (or the next BUFFER_LINES after it) are untranslated → pause.
-const BUFFER_LINES = 5;
+// before the video is allowed to play.
+const BUFFER_LINES_MYMEMORY = 10;  // line-by-line ~1 line/s, but rate-limit pauses can be long
+const BUFFER_LINES_GEMINI    = 40;  // batch of 25 every ~3-8s; need a full batch+ of headroom
 let bufferPaused = false;
+let bufferPollingInterval = null;
 
-function checkBuffer(video) {
-  // Once translation is done, never block
-  if (!isRunning) {
-    if (bufferPaused) {
-      bufferPaused = false;
-      const bufferOverlay = document.getElementById('buffer-overlay');
-      if (bufferOverlay) bufferOverlay.classList.add('hidden');
-      video.play().catch(() => {});
-    }
-    return;
-  }
+function getBufferLines() {
+  return activeEngine === 'gemini' ? BUFFER_LINES_GEMINI : BUFFER_LINES_MYMEMORY;
+}
 
-  const curTime = video.currentTime;
+// Returns { canPlay, pct } based on current video time and translation state.
+function evaluateBuffer(curTime) {
+  if (!isRunning) return { canPlay: true, pct: 100 };
 
-  // Find which subtitle index is "next" (starts after current time)
+  // Find the next subtitle that starts after current time
   let nextIdx = -1;
   for (let i = 0; i < subtitles.length; i++) {
-    if (subtitles[i].startTime > curTime) {
-      nextIdx = i;
-      break;
-    }
+    if (subtitles[i].startTime > curTime) { nextIdx = i; break; }
   }
 
-  // If there are no more subtitles ahead, no need to buffer
-  if (nextIdx === -1) {
-    releaseBuf(video);
-    return;
-  }
+  // No subtitles ahead — nothing to buffer
+  if (nextIdx === -1) return { canPlay: true, pct: 100 };
 
-  // Check the next BUFFER_LINES subtitles starting from nextIdx
+  // Check the next BUFFER_LINES subtitles
+  const end = Math.min(nextIdx + getBufferLines(), subtitles.length);
   let untranslated = 0;
-  const end = Math.min(nextIdx + BUFFER_LINES, subtitles.length);
   for (let i = nextIdx; i < end; i++) {
     if (subtitles[i].translation.trim() === '') untranslated++;
   }
 
   const total = end - nextIdx;
-  const translated = total - untranslated;
-  const pct = total === 0 ? 100 : Math.round((translated / total) * 100);
+  const pct = total === 0 ? 100 : Math.round(((total - untranslated) / total) * 100);
+  return { canPlay: untranslated === 0, pct };
+}
 
+function checkBuffer(video) {
+  const { canPlay, pct } = evaluateBuffer(video.currentTime);
   const bufferOverlay = document.getElementById('buffer-overlay');
   const fillEl = document.getElementById('buffer-progress-fill');
 
-  if (untranslated > 0) {
-    // Need to pause
+  if (!canPlay) {
     if (!bufferPaused) {
       video.pause();
       bufferPaused = true;
@@ -3204,6 +3263,44 @@ function releaseBuf(video) {
   }
   const bufferOverlay = document.getElementById('buffer-overlay');
   if (bufferOverlay) bufferOverlay.classList.add('hidden');
+}
+
+// Active polling: fires every 800ms while translation is running.
+// This is what allows the video to START playing before the user
+// presses play — as soon as enough lines are translated ahead of t=0.
+function startBufferPolling() {
+  stopBufferPolling();
+  const video = document.getElementById('studio-video-element');
+  if (!video || !video.src) return;
+
+  bufferPollingInterval = setInterval(() => {
+    if (!isRunning) {
+      stopBufferPolling();
+      releaseBuf(video);
+      return;
+    }
+    if (video.paused) {
+      const { canPlay, pct } = evaluateBuffer(video.currentTime);
+      const bufferOverlay = document.getElementById('buffer-overlay');
+      const fillEl = document.getElementById('buffer-progress-fill');
+
+      if (canPlay) {
+        releaseBuf(video);
+      } else {
+        if (bufferOverlay) {
+          bufferOverlay.classList.remove('hidden');
+          if (fillEl) fillEl.style.width = pct + '%';
+        }
+      }
+    }
+  }, 800);
+}
+
+function stopBufferPolling() {
+  if (bufferPollingInterval !== null) {
+    clearInterval(bufferPollingInterval);
+    bufferPollingInterval = null;
+  }
 }
 
 function initVideoSync() {
@@ -3248,8 +3345,9 @@ function initVideoSync() {
           // 'trans': mostrar traducción si existe, si no el original
           text = activeSub.translation.trim() !== '' ? activeSub.translation : activeSub.original;
         }
-        
-        overlay.textContent = text;
+
+        // Strip SRT formatting tags (e.g. <c.white>, <i>, <font color="...">) before display
+        overlay.textContent = text.replace(/<[^>]+>/g, '');
         overlay.classList.remove('hidden');
         
         // Highlight fila activa en el editor
