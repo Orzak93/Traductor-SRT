@@ -1029,11 +1029,11 @@
       right: 6%;
       text-align: center;
       color: #ffffff;
-      font-size: 0.95rem;
-      font-weight: 500;
-      text-shadow: 0 2px 4px #000000, 0 0 8px #000000;
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-shadow: 0 2px 6px #000000, 0 0 12px #000000;
       background: rgba(0, 0, 0, 0.7);
-      padding: 0.35rem 0.7rem;
+      padding: 0.4rem 0.85rem;
       border-radius: 6px;
       line-height: 1.4;
       pointer-events: none;
@@ -1041,6 +1041,8 @@
       transition: opacity 0.15s ease;
       z-index: 10;
     }
+
+    /* Overlay más grande en fullscreen */
 
     .video-drop-zone {
       display: flex;
@@ -1113,8 +1115,8 @@
     .video-container-wrapper:fullscreen .video-subtitle-overlay,
     .video-container-wrapper:-webkit-full-screen .video-subtitle-overlay,
     .video-container-wrapper:-moz-full-screen .video-subtitle-overlay {
-      font-size: clamp(1.1rem, 2.5vw, 2rem);
-      padding: 0.5rem 1.2rem;
+      font-size: clamp(1.4rem, 3vw, 2.6rem);
+      padding: 0.6rem 1.4rem;
       bottom: 6%;
       left: 4%;
       right: 4%;
@@ -1404,6 +1406,10 @@
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
                   Gemini AI (Pro)
                 </div>
+                <div class="engine-tab" data-engine="google">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                  Google Translate
+                </div>
               </div>
             </div>
 
@@ -1432,6 +1438,13 @@
                   </div>
                 </div>
               </div>
+            </div>
+
+            <!-- Engine Note for Google Translate -->
+            <div class="engine-specific hidden" id="info-google">
+              <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.4;">
+                Utiliza el endpoint público de Google Translate. <strong>Sin API key, sin registro, sin límite práctico</strong>. Traduce subtítulo a subtítulo con alta calidad y soporte para todos los idiomas.
+              </p>
             </div>
           </div>
 
@@ -2098,14 +2111,23 @@ function updateEngineToggles() {
   document.querySelectorAll('.engine-tab[data-engine]').forEach(tab => {
     tab.classList.toggle('active', tab.dataset.engine === activeEngine);
   });
-  
+
   document.getElementById('info-mymemory').classList.toggle('hidden', activeEngine !== 'mymemory');
   document.getElementById('info-gemini').classList.toggle('hidden', activeEngine !== 'gemini');
-  
+  document.getElementById('info-google').classList.toggle('hidden', activeEngine !== 'google');
+
   const badgeEngine = document.getElementById('badge-engine-type');
   if (badgeEngine) {
-    badgeEngine.textContent = activeEngine === 'mymemory' ? 'MyMemory' : 'Gemini AI';
-    badgeEngine.className = activeEngine === 'mymemory' ? 'badge badge-warning' : 'badge badge-accent';
+    if (activeEngine === 'mymemory') {
+      badgeEngine.textContent = 'MyMemory';
+      badgeEngine.className = 'badge badge-warning';
+    } else if (activeEngine === 'gemini') {
+      badgeEngine.textContent = 'Gemini AI';
+      badgeEngine.className = 'badge badge-accent';
+    } else if (activeEngine === 'google') {
+      badgeEngine.textContent = 'Google Translate';
+      badgeEngine.className = 'badge badge-warning';
+    }
   }
 }
 
@@ -2522,7 +2544,7 @@ function performFindAndReplace() {
 function stripTagsForTranslation(text) {
   const tags = [];
   const stripped = text.replace(/<[^>]+>/g, (match) => {
-    const placeholder = `\x00§${tags.length}§\x00`;
+    const placeholder = `TGSRT${tags.length}TGSRT`;
     tags.push(match);
     return placeholder;
   });
@@ -2532,7 +2554,7 @@ function stripTagsForTranslation(text) {
 // Restores the original tags back into the translated text using the placeholders.
 function restoreTagsAfterTranslation(translatedText, tags) {
   if (tags.length === 0) return translatedText;
-  return translatedText.replace(/\x00§(\d+)§\x00/g, (_, i) => tags[Number(i)] || '');
+  return translatedText.replace(/TGSRT(\d+)TGSRT/g, (_, i) => tags[Number(i)] || '');
 }
 
 /* ── TRANSLATION PIPELINES ── */
@@ -2608,6 +2630,8 @@ async function executeTranslationWork() {
   try {
     if (activeEngine === 'gemini') {
       await translateWithGeminiBatch(fromCode, toCode);
+    } else if (activeEngine === 'google') {
+      await translateWithGoogleIndividual(fromCode, toCode);
     } else {
       await translateWithMyMemoryIndividual(fromCode, toCode);
     }
@@ -2676,6 +2700,8 @@ async function translateSingleSubtitleRow(index) {
       const { stripped, tags } = stripTagsForTranslation(sub.original);
       const results = await fetchGeminiTranslation([{ idx: sub.idx, text: stripped }], fromCode, toCode, apiKey, context);
       result = restoreTagsAfterTranslation(results[0]?.text || '', tags);
+    } else if (activeEngine === 'google') {
+      result = await fetchGoogleTranslation(sub.original, fromCode, toCode);
     } else {
       const email = localStorage.getItem('mymemory_email') || '';
       result = await fetchMyMemoryTranslation(sub.original, fromCode, toCode, email);
@@ -2697,6 +2723,66 @@ async function translateSingleSubtitleRow(index) {
     const ta = document.getElementById(`trans-textarea-${index}`);
     if (ta) ta.value = '';
     showToast('error', `Error al traducir línea #${sub.idx}.`);
+  }
+}
+
+/* ── GOOGLE TRANSLATE IMPLEMENTATION ── */
+async function fetchGoogleTranslation(text, fromCode, toCode) {
+  const { stripped, tags } = stripTagsForTranslation(text);
+  const cleanText = stripped.replace(/\s+/g, ' ').trim();
+
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${fromCode}&tl=${toCode}&dt=t&q=${encodeURIComponent(cleanText)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const data = await res.json();
+  // Response is a nested array: data[0] contains translation segments
+  const translated = data[0].map(seg => seg[0]).join('');
+  return restoreTagsAfterTranslation(translated, tags);
+}
+
+async function translateWithGoogleIndividual(fromCode, toCode) {
+  const total = subtitles.length;
+
+  for (let i = 0; i < total; i++) {
+    const sub = subtitles[i];
+    if (sub.translation.trim() !== '' && sub.status === 'success') continue;
+
+    updateRowStatus(i, 'translating');
+    updateProgressUI(i + 1, total, `Línea ${i + 1} de ${total}`);
+
+    let retries = 0;
+    const maxRetries = 3;
+
+    while (retries <= maxRetries) {
+      try {
+        const result = await fetchGoogleTranslation(sub.original, fromCode, toCode);
+        if (result.trim() === '') throw new Error('Resultado vacío');
+
+        sub.translation = result;
+        const ta = document.getElementById(`trans-textarea-${i}`);
+        if (ta) {
+          ta.value = result;
+          adjustTextAreaHeight(ta);
+        }
+        updateRowStatus(i, 'success');
+        break;
+      } catch (err) {
+        if (retries < maxRetries) {
+          retries++;
+          const waitSec = retries * 5;
+          updateProgressUI(i + 1, total, `Error. Reintento ${retries}/${maxRetries} en ${waitSec}s...`);
+          await sleep(waitSec * 1000);
+        } else {
+          console.error(err);
+          updateRowStatus(i, 'error');
+          break;
+        }
+      }
+    }
+
+    // Small delay to avoid hammering the endpoint
+    await sleep(150);
   }
 }
 
@@ -3070,7 +3156,7 @@ function setSubtitleMode(mode) {
       const active = subtitles.find(s => curTime >= s.startTime && curTime <= s.endTime);
       if (active) {
         const text = mode === 'orig' ? active.original : (active.translation.trim() !== '' ? active.translation : active.original);
-        overlay.textContent = text;
+        overlay.textContent = text.replace(/<[^>]+>/g, '');
         overlay.classList.remove('hidden');
       } else {
         overlay.textContent = '';
@@ -3210,6 +3296,7 @@ let bufferPollingInterval = null;
 
 function getBufferLines() {
   return activeEngine === 'gemini' ? BUFFER_LINES_GEMINI : BUFFER_LINES_MYMEMORY;
+  // Google Translate va línea a línea a ~150ms, igual de rápido que MyMemory → mismo buffer
 }
 
 // Returns { canPlay, pct } based on current video time and translation state.
@@ -3354,7 +3441,6 @@ function initVideoSync() {
         const activeRow = document.getElementById(`sub-row-${activeRowIndex}`);
         if (activeRow) {
           activeRow.classList.add('active-playing');
-          activeRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
       } else {
         overlay.textContent = '';
